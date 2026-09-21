@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
- * Le schéma du socle correspond exactement à docs/MIGRATIONS_CONCEPTION.md.
+ * Le schéma du socle correspond exactement au dictionnaire de données de CLAUDE.md (§4.1).
  * Ces tests tournent sur MariaDB (db_numerise_vignette_test) : le CHECK et les clés y sont réellement appliqués.
  */
 class SchemaTest extends TestCase

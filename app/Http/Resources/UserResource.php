@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Représentation d'un utilisateur pour l'API mobile (docs/API_CONTRACT.md).
+ * Représentation d'un utilisateur pour l'API mobile (CLAUDE.md, §8).
  *
  * @mixin User
  */

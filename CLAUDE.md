@@ -15,7 +15,7 @@ Ce fichier est la **seule documentation** du dépôt. Il se lit en entier avant 
 
 ### 0.1 Début de session (assistant IA)
 
-1. **Sache pour qui tu travailles.** Lis `git config user.name` (ou demande au développeur) : **Moustapha BARRY = mobile** (`mobile/`, tâches M1 à M5) ; **Amadou KAREMBE = Web** (code Laravel, tâches W1 à W14, API des modules comprise). Tu ne modifies que les fichiers de ta plateforme : `mobile/` est à Moustapha, le code Laravel est à Amadou. Les points de jonction sont le contrat d'API (§8, discuté avant d'être changé) et M3 (qui touche au socle, après revue). Le socle et ce fichier ne changent qu'avec l'accord des deux.
+1. **Sache pour qui tu travailles.** Lis `git config user.name` (ou demande au développeur) : **Moustapha BARRY = mobile** (`mobile/`, tâches M1, M2, M4, M5) ; **Amadou KAREMBE = Web** (code Laravel, tâches W1 à W14, API des modules comprise). Tu ne modifies que les fichiers de ta plateforme : `mobile/` est à Moustapha, le code Laravel est à Amadou. Les points de jonction sont le contrat d'API (§8, discuté avant d'être changé) et les routes publiques de la population (D32), qui touchent au socle et se relisent à deux. Le socle et ce fichier ne changent qu'avec l'accord des deux.
 2. **Lis ce fichier en entier** (§4 architecture, §5 décisions, §6 ajout d'un module, §10 tâches), puis `docs/cahier_Plateforme.pdf` pour le module que tu construis. Le cahier prime sur toute idée ; ce qui n'y est pas est « À VALIDER AVEC LE CLIENT ».
 3. **Vérifie l'environnement avant de coder** (§3) : `composer install`, `.env`, les deux bases, `php artisan migrate --seed`, puis `composer test` **vert avant ta première modification** (côté mobile : `npm run typecheck` dans `mobile/`).
 4. **Imite l'existant, ne réinvente pas.** Fichiers de référence :
@@ -54,7 +54,7 @@ Architecture hybride (cahier §3) : **plateforme Web PC** (commissariats, mairie
 | Commissaire | Web | Saisie des profils (propriétaire + moto), déclarations de vol, demandes et retraits de VGT, motos retrouvées, informations aux populations. Il crée et gère la police de son commissariat |
 | Police (patrouille) | Mobile | Contrôle rapide : moto volée ou non, vignette à jour ; consultation des informations |
 | Agent de mairie | Web | Validation des formulaires VGT, réception des preuves de paiement, remise de la carte physique |
-| Population | Mobile | Consultation des motos retrouvées, demande de renouvellement VGT après un premier enregistrement (authentification reportée, D17) |
+| Population | Mobile, **sans connexion** (D32) | Consultation des motos retrouvées et des informations, demande de renouvellement VGT après un premier enregistrement (confirmation par SMS) |
 
 Cas d'usage : (1) enregistrement initial et acquisition de la VGT au commissariat (identité, moto, attestation de vente) ; (2) déclaration de vol : la moto est marquée « Volée » dans une base consultable par tous les agents, et un SMS part au propriétaire quand elle est retrouvée. Équipe : **Moustapha BARRY** et **Amadou KAREMBE**, chacun avec son assistant IA.
 
@@ -133,13 +133,13 @@ Clés étrangères vers les institutions et l'audit : `RESTRICT`. Institutions e
 | `commissaire` | 50 | commissariat | Web | Son commissariat ; crée sa police | Admin national, superadmin |
 | `mairie` (agent) | 50 | mairie | Web | Sa mairie | Admin national, superadmin |
 | `police` | 30 | commissariat | **Mobile** | Son commissariat ; lecture nationale des motos volées au contrôle | Commissaire, admin national, superadmin |
-| `population` | 10 | aucune | Mobile (plus tard) | Ses propres données | Module Population (D17) |
+| `population` | 10 | aucune | **aucun** (pas de compte, D32) | — | jamais : rôle inutilisé, retrait du socle proposé (PROPOSITION TECHNIQUE — À VALIDER : `RoleName`, `RoleSeeder`, `role_hierarchy`, factory et tests) |
 
 Plafond de rôle (`config/role_hierarchy.php`, via `App\Enums\RoleName`) : superadmin → tous ; admin national → commissaire, mairie, police ; commissaire → police de son commissariat ; les autres → aucun. Personne n'agit sur un compte de niveau supérieur ou égal, sauf le superadmin. L'admin national ne voit ni ne gère les superadmins.
 
 ### 4.3 Canaux
 
-`config/channels.php` : Web = superadmin, admin national, commissaire, mairie ; API = police (population ajoutée par le module Population). Un rôle connecté sur le mauvais canal est refusé, et l'échec est audité.
+`config/channels.php` : Web = superadmin, admin national, commissaire, mairie ; API = police. La population n'a pas de canal : elle n'a pas de compte et utilise les routes publiques de l'API (D32, §4.9). Un rôle connecté sur le mauvais canal est refusé, et l'échec est audité.
 
 ### 4.4 Permissions (deux voies, D6 + D23)
 
@@ -185,7 +185,7 @@ Middleware : `active` (compte ET institution actifs), `channel:web|api`, `passwo
 
 ### 4.9 API et Sanctum
 
-Préfixe `/api/v1`, JSON uniquement, sans session ni CSRF, un fichier par module dans `routes/api/v1/*.php`. Pile d'une route : `auth:sanctum` → `active` → `channel:api` → `throttle:api`. Sanctum : Bearer seulement (`guard` vidé, `stateful` vide, `/sanctum/csrf-cookie` désactivé), jeton par appareil, 30 jours (`SANCTUM_TOKEN_EXPIRATION`, minutes). Compatibilité Sanctum + Spatie testée. Contrat complet : §8.
+Préfixe `/api/v1`, JSON uniquement, sans session ni CSRF, un fichier par module dans `routes/api/v1/*.php`. Pile d'une route : `auth:sanctum` → `active` → `channel:api` → `throttle:api`. Sanctum : Bearer seulement (`guard` vidé, `stateful` vide, `/sanctum/csrf-cookie` désactivé), jeton par appareil, 30 jours (`SANCTUM_TOKEN_EXPIRATION`, minutes). Compatibilité Sanctum + Spatie testée. **Routes publiques (D32)** : la population n'ayant pas de compte, certains endpoints de lecture (informations, motos retrouvées) et la demande de VGT sont **sans jeton** ; ils sont limités par IP (limiteur dédié, à ajouter au socle avec W6), ne renvoient aucune donnée personnelle, et figurent dans la liste blanche du test d'architecture « toute route est protégée » (aujourd'hui : santé et connexion). Contrat complet : §8.
 
 ### 4.10 Arborescence
 
@@ -227,7 +227,7 @@ tests/                 Feature, Unit, Architecture
 | D14 | Mot de passe ≥ 8 caractères, lettres et chiffres ; changement obligatoire d'un mot de passe temporaire |
 | D15 | Assets locaux, aucun CDN |
 | D16 | Le superadmin lit ET écrit les données métier (maintenance) ; toute modification est auditée |
-| D17 | Authentification de la population reportée au module Population |
+| D17 | ~~Authentification de la population reportée au module Population~~ → **D32** |
 | D18 | Documentation en un seul fichier (ce guide, voir aussi D30) |
 | D19 | Aucun pipeline frontend Node dans l'application Web (pas de Vite, Tailwind ni police distante) : Blade + Bootstrap 5 + assets locaux dans `public/assets/` |
 | D20 | Interface Web : thème « Semi Bleu » (sidebar sombre, cartes à bandeau bleu, modales bleues, DataTables), architecture et code propres au projet |
@@ -241,13 +241,14 @@ tests/                 Feature, Unit, Architecture
 | D28 | Nom de la plateforme : **VigiMoto** (proposé, modifiable dans `config/brand.php` + `APP_NAME`). Le dépôt et le dossier restent `Numerise_vignette` |
 | D29 | Application mobile : **Expo (React Native) dans le dossier `mobile/`** du même dépôt, testée avec Expo Go ; elle ne consomme que l'API `/api/v1` |
 | D30 | Un seul fichier `.md` dans le dépôt : ce guide |
-| D31 | **Répartition par plateforme** : Moustapha = **mobile** (M1 à M5), Amadou = **Web** (W1 à W14, avec l'API de chaque module). Les deux travaillent en parallèle : le mobile avance sur le contrat d'API (§8) sans attendre le Web. Hébergement **reporté** jusqu'au moment opportun (aucune tâche pour l'instant). Charge : 13 points contre 44 (§10) |
+| D31 | **Répartition par plateforme** : Moustapha = **mobile** (M1, M2, M4, M5), Amadou = **Web** (W1 à W14, avec l'API de chaque module). Les deux travaillent en parallèle : le mobile avance sur le contrat d'API (§8) sans attendre le Web. Hébergement **reporté** jusqu'au moment opportun (aucune tâche pour l'instant). Charge : 10 points contre 44 (§10) |
+| D32 | **La population n'a pas d'authentification** (décision de Moustapha, conforme au cahier §7 « Sécurité » : seuls la police, les commissaires et les agents de mairie utilisent la connexion). Elle consulte les informations et les motos retrouvées, et demande une VGT **sans compte**, par des routes **publiques** de l'API (sans jeton, limitées par IP, lecture seule sauf la demande de VGT). Comment elle s'identifie pour la demande (matricule, téléphone enregistré, code reçu par SMS : le cahier §8 parle d'un « sms pour la confirmation ») : À VALIDER AVEC LE CLIENT. Supprime la tâche M3 |
 
 ### Points ouverts — client (À VALIDER AVEC LE CLIENT)
 
 Non bloquants pour le socle : durée de conservation de l'audit ; nombre de commissaires par commissariat ; canal de remise du mot de passe temporaire (main propre, SMS plus tard) ; champs additionnels des institutions ; création des agents de mairie par l'admin national et le superadmin seulement ; logo définitif de la plateforme ; **validation des visuels du diaporama de connexion** (images générées par IA, sans texte, drapeau, blason ni marque ; à faire valider par le client avant toute mise en ligne — sur la diapositive 5, les deux agents flous à l'arrière-plan semblent tenir des armes longues : à régénérer avec les prompts de la version 2 si cela gêne).
 
-**Bloquants pour les modules métier** (à traiter avant leur conception) : comptes de la population (D17) ; règles de la vignette (durée de validité, tarifs, arriérés) ; paiement (montant, qui confirme, statut, rôle du « code marchand de l'État ») ; qui enregistre « moto retrouvée » (commissaire, police ou les deux) ; workflow mairie (statuts, rejet, confirmation de remise de la carte) ; nature et effet de la « taxe à payer » du contrôle de police ; identification de la moto (matricule seul ou châssis, unicité) ; un propriétaire peut-il avoir plusieurs motos, historique des changements de propriétaire ; opérateur SMS, langue et contenu des messages ; QR Code et Mobile Money : phase 1 ou plus tard.
+**Bloquants pour les modules métier** (à traiter avant leur conception) : identification de la population **sans compte** pour la demande de VGT (D32) ; règles de la vignette (durée de validité, tarifs, arriérés) ; paiement (montant, qui confirme, statut, rôle du « code marchand de l'État ») ; qui enregistre « moto retrouvée » (commissaire, police ou les deux) ; workflow mairie (statuts, rejet, confirmation de remise de la carte) ; nature et effet de la « taxe à payer » du contrôle de police ; identification de la moto (matricule seul ou châssis, unicité) ; un propriétaire peut-il avoir plusieurs motos, historique des changements de propriétaire ; opérateur SMS, langue et contenu des messages ; QR Code et Mobile Money : phase 1 ou plus tard.
 
 ## 6. Comment ajouter un module
 
@@ -336,7 +337,7 @@ Rédigé côté mobile d'après le cahier (§6 « Informations » et « Affichag
 
 | Méthode | Route | Auth | Rôle |
 |---|---|---|---|
-| GET | `/informations?page=1` | jeton | Liste paginée, la plus récente d'abord ; lecture seule |
+| GET | `/informations?page=1` | **publique** (aucun jeton, D32) | Liste paginée, la plus récente d'abord ; lecture seule ; consommée par la police (M2) et la population (M5) |
 
 ```json
 { "data": [ { "id": 4, "commissaire_name": "…", "commissariat_name": "…", "description": "…",
@@ -347,18 +348,17 @@ Rédigé côté mobile d'après le cahier (§6 « Informations » et « Affichag
 
 - Champs du cahier : nom du commissaire, nom du commissariat, description, fichier PDF, image ; le cahier n'a **pas de titre**. `description`, `image_url` et `document_url` sont chacun optionnels (`null`) : « description **ou** fichier PDF **ou** image ». URL absolues, joignables depuis le téléphone.
 - `published_at` (tri, date affichée) et la pagination sont des PROPOSITIONS TECHNIQUES — À VALIDER.
-- Erreurs : 401 et 403 comme ailleurs (`code = forbidden` si la permission manque). Tant que l'endpoint n'existe pas, l'application affiche « Les informations ne sont pas encore disponibles sur le serveur ».
-- À VALIDER AVEC LE CLIENT : la police voit-elle les informations de **tous** les commissariats ou seulement celles du sien ? (le cahier dit « informations venant des différents commissariats »).
+- Endpoint **public** : pas de jeton ni de permission, limitation par IP (429 au-delà), aucune donnée personnelle ; il renvoie les informations de **tous** les commissariats (le cahier dit « informations venant des différents commissariats »). Tant qu'il n'existe pas, l'application affiche « Les informations ne sont pas encore disponibles sur le serveur ».
 
 ## 9. Application mobile (`mobile/`)
 
 Application **Expo (React Native, TypeScript, Expo Router)**, à essayer avec **Expo Go**, dans le même dépôt (D29). Elle consomme uniquement l'API `/api/v1` (§8). Mêmes versions d'Expo que le projet KalanNet (SDK 57) : compatible avec le même Expo Go. Pile : `expo-router`, `react-native-paper`, `axios`, `expo-secure-store` (le jeton est stocké dans le Keystore du téléphone, jamais en clair).
 
-**Écrans** : connexion (numéro de téléphone + mot de passe) ; **changement de mot de passe obligatoire** tant que le mot de passe est temporaire (le jeton est alors restreint, §8) ; accueil (bonjour, rôle, institution, état du serveur, liste « À venir » du contrôle de police, tirer pour rafraîchir) ; **informations** (M2 : liste en lecture seule, description, image, PDF, commissaire et commissariat, pages suivantes au défilement) ; profil (informations, changer le mot de passe, déconnexion). Un 401 ou un compte désactivé déconnecte proprement l'application et affiche un message.
+**Écrans** : **espace public sans connexion** (la population n'a pas de compte, D32 : informations ; motos retrouvées et demande de VGT en fiches « À venir » ; bouton « Connexion » en haut à droite, retour possible) ; connexion (numéro de téléphone + mot de passe, réservée à la police) ; **changement de mot de passe obligatoire** tant que le mot de passe est temporaire (le jeton est alors restreint, §8) ; accueil (bonjour, rôle, institution, état du serveur, liste « À venir » du contrôle de police, tirer pour rafraîchir) ; **informations** (M2 : liste en lecture seule, description, image, PDF, commissaire et commissariat, pages suivantes au défilement) ; profil (informations, changer le mot de passe, déconnexion). Un 401 ou un compte désactivé déconnecte proprement l'application et affiche un message.
 
 ```
-mobile/app/            _layout.tsx (gardes de navigation Stack.Protected), login, change-password, (tabs)/{index,informations,profile}
-mobile/components/     BrandTitle, PasswordForm, MockBanner
+mobile/app/            _layout.tsx (gardes de navigation Stack.Protected), login, change-password, public/ (espace de la population), (tabs)/{index,informations,profile} (police)
+mobile/components/     BrandTitle, PasswordForm, InformationsList, ComingSoon, MockBanner
 mobile/context/        AuthContext (session, jeton, changement de mot de passe)
 mobile/lib/            api.ts (axios + intercepteurs + messages en français), storage.ts (SecureStore), theme.ts, mock/ (mode maquette)
 mobile/types/api.ts    types du contrat d'API
@@ -394,7 +394,7 @@ $r['temporary_password'];
 
 ## 10. Répartition du travail
 
-**Principe** (décidé par Moustapha, D31) : **Moustapha = mobile** (application Expo `mobile/`), **Amadou = Web** (Laravel : écrans Web **et API** de chaque module, selon la checklist du §6). Chacun travaille sur sa plateforme, **en parallèle** : le mobile n'attend pas la fin du Web, il avance sur le **contrat d'API** (§8). L'hébergement est **reporté** jusqu'au moment opportun : aucune tâche pour l'instant. Charge en points (1 = petite tâche, 5 = grosse) : Amadou 44 (W1 à W14), Moustapha 13 (M1 à M5), total 57.
+**Principe** (décidé par Moustapha, D31) : **Moustapha = mobile** (application Expo `mobile/`), **Amadou = Web** (Laravel : écrans Web **et API** de chaque module, selon la checklist du §6). Chacun travaille sur sa plateforme, **en parallèle** : le mobile n'attend pas la fin du Web, il avance sur le **contrat d'API** (§8). L'hébergement est **reporté** jusqu'au moment opportun : aucune tâche pour l'instant. Charge en points (1 = petite tâche, 5 = grosse) : Amadou 44 (W1 à W14), Moustapha 10 (M1, M2, M4, M5), total 54. La tâche M3 (authentification de la population) est supprimée par D32.
 
 **Mobile sans attendre le Web** (PROPOSITION TECHNIQUE — À VALIDER, mis en place avec M2, voir §9 « Mode maquette ») : pour chaque module, le contrat d'API est écrit d'abord au §8 ; l'écran mobile est développé contre des réponses factices conformes à ce contrat (`EXPO_PUBLIC_USE_MOCK=true`, jamais dans un build de production) ; le passage à l'API réelle se fait quand l'endpoint est fusionné, sans changer les écrans.
 
@@ -422,22 +422,21 @@ Authentification Web et API, rôles, permissions à deux voies, audit, cloisonne
 | W14 | Module **SMS** | 3 | W10, W12 | opérateur, langue, contenu | Amadou |
 | M1 | Mobile police : **contrôle d'une moto** | 4 | endpoint livré avec W11 | « taxe à payer » du contrôle | Moustapha |
 | M2 | Mobile police : **informations** | 1 | API de W6 | non | Moustapha |
-| M3 | **Authentification de la population** (D17), côté serveur et mobile | 3 | — | comptes de la population | Moustapha |
-| M4 | Mobile population : **demande de VGT** et suivi | 3 | API de W11, W12, M3 | règles de la vignette | Moustapha |
-| M5 | Mobile population : **motos retrouvées** et informations | 2 | API de W10, W6, M3 | non | Moustapha |
+| M4 | Mobile population : **demande de VGT** et suivi (sans compte) | 3 | API publique de W11, W12 | règles de la vignette, identification sans compte | Moustapha |
+| M5 | Mobile population : **motos retrouvées** et informations (sans compte) | 2 | API publique de W10, W6 | non | Moustapha |
 
 Hors périmètre pour l'instant : QR Code et Mobile Money (phase 1 ou plus tard, À VALIDER AVEC LE CLIENT), hébergement.
 
 ### Détail des tâches
 
-Chaque tâche suit la checklist du §6 et s'accompagne de tests ; aucune ne modifie le socle sans revue. **Chaque tâche Web fournit l'API que consomment les tâches mobiles qui en dépendent** (contrôleur `Api/V1`, Resource, route, contrat §8), sauf M3 qui porte aussi son côté serveur.
+Chaque tâche suit la checklist du §6 et s'accompagne de tests ; aucune ne modifie le socle sans revue. **Chaque tâche Web fournit l'API que consomment les tâches mobiles qui en dépendent** (contrôleur `Api/V1`, Resource, route, contrat §8), Les endpoints de la population sont **publics** (D32).
 
 - **W1 Commissariats** (`commissariats.view/create/update/delete`) : liste DataTables, création et édition en modale (nom, code), activation/désactivation (désactiver coupe l'accès de tous les utilisateurs de l'institution : sessions et jetons supprimés), suppression en soft delete, `CommissariatPolicy`, FormRequests, `routes/web/commissariats.php`, audit. Le manifeste existe (`config/modules/commissariats.php`) : l'entrée de menu apparaît dès que la route `commissariats.index` existe (le menu Paramètres la liste déjà).
 - **W2 Mairies** : identique à W1 (`config/modules/mairies.php`, route `mairies.index`).
 - **W3 Audit** (`audit.view`) : liste filtrable (auteur, module, action, dates, acteur superadmin) et détail avec anciennes et nouvelles valeurs ; actions du superadmin signalées ; lecture seule.
 - **W4 Système** (`system.view`, `system.maintain`) : environnement, base, file d'attente, jobs échoués en lecture seule ; actions de maintenance sur liste blanche (vider le cache), journalisées ; rien de destructeur.
 - **W5 Utilisateurs** (`users.*`) : liste (`User::visibleTo`), création par `UserProvisioningService::create` (mot de passe temporaire affiché **une seule fois**), modification, activer/désactiver, réinitialiser le mot de passe, révoquer sessions et jetons, suppression (soft), changement d'institution (admin national et superadmin), `UserPolicy` (plafond de rôle, D9 : le commissaire ne gère que sa police). Touche au service de comptes du socle. Une fois livrée, elle permet de créer les comptes police pour tester le mobile (en attendant : `tinker`, §9).
-- **W6 Informations** : le commissaire publie (description, fichier PDF, image), la mairie, la police et la population consultent (cahier §8, §9). Fournit l'endpoint de lecture consommé par M2 et M5. Permissions à définir dans le manifeste (PROPOSITION TECHNIQUE — À VALIDER).
+- **W6 Informations** : le commissaire publie (description, fichier PDF, image), la mairie, la police et la population consultent (cahier §8, §9). Fournit l'endpoint de lecture consommé par M2 et M5, **public** (D32) : W6 introduit donc le limiteur par IP et l'entrée de la liste blanche du test d'architecture, à relire par les deux. Permissions à définir dans le manifeste (PROPOSITION TECHNIQUE — À VALIDER).
 - **W7 Propriétaires** : fiche (nom, prénom, genre, adresse, téléphone identifié à son nom, contact en cas d'urgence), liste, recherche, modification, suppression ; cloisonné par commissariat.
 - **W8 Motos** : matricule, couleur, genre ou marque, année de la VGT ; attestation de vente (vendeur, témoins si besoin) ; lien avec le propriétaire ; liste, recherche, modification, suppression.
 - **W9 Déclarations** : vol, braquage ou autre (lieu, date, circonstances) ; la moto est marquée « Volée » dans la base consultable par tous les agents.
@@ -448,14 +447,13 @@ Chaque tâche suit la checklist du §6 et s'accompagne de tests ; aucune ne modi
 - **W14 SMS** : service d'envoi (opérateur à choisir avec le client), déclenché par les événements « moto retrouvée » et « paiement confirmé », en file d'attente, audité.
 - **M1 Contrôle d'une moto** : écran mobile de saisie du matricule et résultat (volée ou non, vignette à jour), à partir de l'endpoint de contrôle livré avec W11.
 - **M2 Informations (police)** : consultation des informations de W6 dans l'application. **Écran fait**, contre le contrat brouillon du §8 en mode maquette ; il passera à l'API réelle quand W6 sera fusionnée (Amadou valide le contrat d'abord).
-- **M3 Authentification de la population** : comptes, connexion mobile par numéro de téléphone, activation du canal API pour le rôle `population` (`config/channels.php`), écrans de connexion. Seule tâche mobile qui modifie le socle : revue par Amadou avant fusion.
-- **M4 Demande de VGT (population)** : demande de renouvellement après un premier enregistrement, choix de la mairie, paiement, suivi.
-- **M5 Motos retrouvées et informations (population)** : consultation.
+- **M4 Demande de VGT (population)** : demande de renouvellement après un premier enregistrement, choix de la mairie, paiement, suivi, **sans connexion** (D32).
+- **M5 Motos retrouvées et informations (population)** : consultation, **sans connexion** (D32).
 
 ### Ordre de travail de chacun
 
 - **Amadou** : W1 → W2 → W5 → W6 → W7 → W8 → W9 → W11 → W12 → W10 → W13 → W14. W3 et W4 ne bloquent personne : à prendre quand une réponse du client se fait attendre. W5 (comptes de test) et W6 (informations) passent en premier ; W11 et W12 avant W10 parce que M1 et M4 en dépendent.
-- **Moustapha** : M2 (écran et mode maquette faits, en attente de l'endpoint de W6) → M3 → M1 → M4 → M5. M3 attend la décision sur les comptes de la population ; M1 et M4 attendent des réponses du client (§5).
+- **Moustapha** : M2 (écran et mode maquette faits, en attente de l'endpoint de W6) → M1 → M4 → M5. M1 et M4 attendent des réponses du client (§5).
 
 Chemin critique : W7 → W8 → W9 → W11 (endpoint de contrôle) → M1, puis W12 → M4 et W10 → M5.
 
@@ -463,7 +461,7 @@ Chemin critique : W7 → W8 → W9 → W11 (endpoint de contrôle) → M1, puis 
 
 1. **Contrat d'API (§8), module par module** : Amadou rédige le contrat avant de coder l'endpoint, Moustapha le valide et code l'écran contre des réponses factices. Un contrat modifié après validation se discute avant fusion.
 2. **Comptes de test** : Moustapha crée ses comptes `police` par `tinker` (§9) tant que W5 n'est pas livrée.
-3. **M3 et le socle** : `config/channels.php` et les rôles ne se modifient qu'après revue des deux.
+3. **Routes publiques (D32)** : le limiteur par IP et la liste blanche du test d'architecture sont du socle, relus par les deux ; la suppression éventuelle du rôle `population` aussi.
 
 Les modèles (`Proprietaire`, `Moto`), la validité de la VGT et les événements du SMS restent chez Amadou : ils ne sont plus un point de contact entre vous.
 

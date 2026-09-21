@@ -7,7 +7,7 @@
 |
 | Sert uniquement à afficher, dans la sidebar et sur une fiche, ce qui reste à
 | construire. Aucune permission, table ni route métier n'existe pour ces
-| modules : leurs règles sont à valider avec le client (docs/DECISIONS.md).
+| modules : leurs règles sont à valider avec le client (CLAUDE.md, §5).
 | Une entrée disparaît dès que le manifeste config/modules/<clé>.php existe.
 |
 | `roles` : rôles Web qui verront ce module dans le cahier des charges

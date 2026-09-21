@@ -18,7 +18,7 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Logique partagée Web / API de création et de sécurité des comptes.
- * Applique la règle rôle ↔ institution (que la base ne peut pas garantir, cf. docs/MIGRATIONS_CONCEPTION.md §4)
+ * Applique la règle rôle ↔ institution (que la base ne peut pas garantir, cf. CLAUDE.md §4.1)
  * et le plafond de rôle. Un compte n'a jamais deux rôles ni deux institutions.
  */
 class UserProvisioningService
