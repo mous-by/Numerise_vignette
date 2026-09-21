@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "VigiMoto",
+    "slug": "vigimoto-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "vigimoto",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.vigimoto.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#123a63",
+        "foregroundImage": "./assets/images/adaptive-icon.png"
+      },
+      "softwareKeyboardLayoutMode": "pan"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#123a63"
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {}
+    }
+  }
+}
