@@ -63,6 +63,17 @@ export function mockAdapter(config: InternalAxiosRequestConfig): Promise<AxiosRe
     return respond(config, 200, authResponse());
   }
 
+  // Publique aussi (D32 : la population n'a pas de compte) : aucun jeton exigé.
+  if (route === 'get /informations') {
+    const page = Math.max(1, Number((config.params as { page?: number } | undefined)?.page ?? 1));
+    const result: Paginated<(typeof MOCK_INFORMATIONS)[number]> = {
+      data: MOCK_INFORMATIONS.slice((page - 1) * PER_PAGE, page * PER_PAGE),
+      meta: { current_page: page, last_page: Math.ceil(MOCK_INFORMATIONS.length / PER_PAGE) },
+    };
+
+    return respond(config, 200, result);
+  }
+
   // Le reste exige un jeton, comme le vrai serveur.
   if (!isAuthenticated(config)) {
     return respond(config, 401, { message: 'Non authentifié.' });
@@ -85,16 +96,6 @@ export function mockAdapter(config: InternalAxiosRequestConfig): Promise<AxiosRe
       }
 
       return respond(config, 200, authResponse());
-    }
-
-    case 'get /informations': {
-      const page = Math.max(1, Number((config.params as { page?: number } | undefined)?.page ?? 1));
-      const result: Paginated<(typeof MOCK_INFORMATIONS)[number]> = {
-        data: MOCK_INFORMATIONS.slice((page - 1) * PER_PAGE, page * PER_PAGE),
-        meta: { current_page: page, last_page: Math.ceil(MOCK_INFORMATIONS.length / PER_PAGE) },
-      };
-
-      return respond(config, 200, result);
     }
   }
 

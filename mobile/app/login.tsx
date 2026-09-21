@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, HelperText, Text, TextInput } from 'react-native-paper';
@@ -9,6 +10,7 @@ import { apiErrorMessage } from '@/lib/api';
 import { colors } from '@/lib/theme';
 
 export default function LoginScreen() {
+  const router = useRouter();
   const { login, notice } = useAuth();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -88,6 +90,9 @@ export default function LoginScreen() {
 
               <Button mode="contained" onPress={submit} loading={loading} disabled={loading} contentStyle={styles.buttonContent}>
                 Connexion
+              </Button>
+              <Button mode="text" onPress={() => (router.canGoBack() ? router.back() : router.replace('/public'))}>
+                Retour à l'espace public
               </Button>
             </Card.Content>
           </Card>

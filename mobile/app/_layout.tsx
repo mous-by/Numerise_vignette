@@ -53,8 +53,9 @@ function Navigation() {
         <Stack.Screen name="change-password" />
       </Stack.Protected>
 
-      {/* Non connecté. */}
+      {/* Non connecté : l'espace public de la population (sans compte, D32) d'abord, la connexion (police) en plus. */}
       <Stack.Protected guard={!signedIn}>
+        <Stack.Screen name="public" />
         <Stack.Screen name="login" />
       </Stack.Protected>
     </Stack>

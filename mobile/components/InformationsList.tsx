@@ -7,8 +7,9 @@ import { USE_MOCK } from '@/lib/mock/config';
 import { colors } from '@/lib/theme';
 import type { Information, Paginated } from '@/types/api';
 
-// M2 : les informations publiées par les commissaires (cahier §6 et §8), en lecture seule. Chaque carte affiche, comme au
-// cahier, la description, l'image ou le fichier PDF, puis le nom du commissaire et du commissariat.
+// M2 et M5 : les informations publiées par les commissaires (cahier §6 et §8), en lecture seule, pour la police (onglet)
+// et pour la population (espace public, sans connexion, D32). Chaque carte affiche, comme au cahier, la description,
+// l'image ou le fichier PDF, puis le nom du commissaire et du commissariat.
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -26,7 +27,7 @@ async function openDocument(url: string) {
   }
 }
 
-export default function InformationsScreen() {
+export default function InformationsList() {
   const [items, setItems] = useState<Information[]>([]);
   const [page, setPage] = useState(0);
   const [lastPage, setLastPage] = useState(1);
