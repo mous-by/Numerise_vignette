@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 're
 import { Button, Card, HelperText, Text, TextInput } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandTitle from '@/components/BrandTitle';
+import MockBanner from '@/components/MockBanner';
 import { useAuth } from '@/context/AuthContext';
 import { apiErrorMessage } from '@/lib/api';
 import { colors } from '@/lib/theme';
@@ -37,6 +38,7 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.screen}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <MockBanner />
           <View style={styles.brand}>
             <BrandTitle size={44} onDark />
             <Text style={styles.tagline}>VIGNETTES & CONTRÔLE DES MOTOS</Text>

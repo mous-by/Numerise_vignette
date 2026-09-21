@@ -37,3 +37,25 @@ export interface ApiErrorBody {
   code?: 'account_disabled' | 'channel_forbidden' | 'password_change_required' | 'forbidden';
   errors?: Record<string, string[]>;
 }
+
+/** Réponse paginée standard des ressources Laravel (seule `meta` est utilisée par l'application). */
+export interface Paginated<T> {
+  data: T[];
+  meta: { current_page: number; last_page: number };
+}
+
+/**
+ * Une information publiée par un commissaire (cahier §6 « Informations »). BROUILLON du contrat de W6 :
+ * à valider par Amadou avant que l'endpoint existe (voir CLAUDE.md, §8).
+ */
+export interface Information {
+  id: number;
+  commissaire_name: string;
+  commissariat_name: string;
+  description: string | null;
+  /** URL de l'image importée, ou null. */
+  image_url: string | null;
+  /** URL du fichier PDF importé, ou null. */
+  document_url: string | null;
+  published_at: string;
+}

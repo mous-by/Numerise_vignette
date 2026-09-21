@@ -66,7 +66,7 @@ Cas d'usage : (1) enregistrement initial et acquisition de la VGT au commissaria
 - Audit synchrone immuable, cloisonnement institutionnel fail-closed, protection du dernier superadmin, superadmins créés automatiquement.
 - Tableau de bord (deux vues) en données fictives activables, sidebar listant tous les modules à venir, **Paramètres** en bas de la sidebar.
 - Profil à deux onglets (informations, mot de passe), page de connexion avec formulaire à droite et diaporama d'images, survol unifié dans toute l'interface.
-- API mobile d'authentification (`/api/v1`) et application Expo (connexion, changement de mot de passe, profil).
+- API mobile d'authentification (`/api/v1`) et application Expo (connexion, changement de mot de passe, profil, **informations** de la police en mode maquette, M2).
 - 16 tables migrées, tests automatiques (`composer test`), thème et assets locaux.
 
 **Reste** : voir §10 (backlog).
@@ -330,17 +330,37 @@ Tant que le mot de passe est **temporaire**, `password_change_required` vaut `tr
 | 422 `{"message","errors":{"phone":[…]}}` | Validation, ou identifiants refusés (un numéro inconnu et un mauvais mot de passe reçoivent le même message) |
 | 429 | Trop de tentatives, ou limitation |
 
+### Contrat des informations — BROUILLON (W6, consommé par M2 et M5)
+
+Rédigé côté mobile d'après le cahier (§6 « Informations » et « Affichage »), **à valider par Amadou** : tant que W6 n'est pas fusionnée, aucun endpoint n'existe. L'application est déjà écrite contre ce contrat (mode maquette, §9).
+
+| Méthode | Route | Auth | Rôle |
+|---|---|---|---|
+| GET | `/informations?page=1` | jeton | Liste paginée, la plus récente d'abord ; lecture seule |
+
+```json
+{ "data": [ { "id": 4, "commissaire_name": "…", "commissariat_name": "…", "description": "…",
+              "image_url": "https://…/image.jpg", "document_url": "https://…/document.pdf",
+              "published_at": "2026-09-21T10:00:00+00:00" } ],
+  "meta": { "current_page": 1, "last_page": 2 } }
+```
+
+- Champs du cahier : nom du commissaire, nom du commissariat, description, fichier PDF, image ; le cahier n'a **pas de titre**. `description`, `image_url` et `document_url` sont chacun optionnels (`null`) : « description **ou** fichier PDF **ou** image ». URL absolues, joignables depuis le téléphone.
+- `published_at` (tri, date affichée) et la pagination sont des PROPOSITIONS TECHNIQUES — À VALIDER.
+- Erreurs : 401 et 403 comme ailleurs (`code = forbidden` si la permission manque). Tant que l'endpoint n'existe pas, l'application affiche « Les informations ne sont pas encore disponibles sur le serveur ».
+- À VALIDER AVEC LE CLIENT : la police voit-elle les informations de **tous** les commissariats ou seulement celles du sien ? (le cahier dit « informations venant des différents commissariats »).
+
 ## 9. Application mobile (`mobile/`)
 
 Application **Expo (React Native, TypeScript, Expo Router)**, à essayer avec **Expo Go**, dans le même dépôt (D29). Elle consomme uniquement l'API `/api/v1` (§8). Mêmes versions d'Expo que le projet KalanNet (SDK 57) : compatible avec le même Expo Go. Pile : `expo-router`, `react-native-paper`, `axios`, `expo-secure-store` (le jeton est stocké dans le Keystore du téléphone, jamais en clair).
 
-**Écrans** : connexion (numéro de téléphone + mot de passe) ; **changement de mot de passe obligatoire** tant que le mot de passe est temporaire (le jeton est alors restreint, §8) ; accueil (bonjour, rôle, institution, état du serveur, liste « À venir » du contrôle de police, tirer pour rafraîchir) ; profil (informations, changer le mot de passe, déconnexion). Un 401 ou un compte désactivé déconnecte proprement l'application et affiche un message.
+**Écrans** : connexion (numéro de téléphone + mot de passe) ; **changement de mot de passe obligatoire** tant que le mot de passe est temporaire (le jeton est alors restreint, §8) ; accueil (bonjour, rôle, institution, état du serveur, liste « À venir » du contrôle de police, tirer pour rafraîchir) ; **informations** (M2 : liste en lecture seule, description, image, PDF, commissaire et commissariat, pages suivantes au défilement) ; profil (informations, changer le mot de passe, déconnexion). Un 401 ou un compte désactivé déconnecte proprement l'application et affiche un message.
 
 ```
-mobile/app/            _layout.tsx (gardes de navigation Stack.Protected), login, change-password, (tabs)/{index,profile}
-mobile/components/     BrandTitle, PasswordForm
+mobile/app/            _layout.tsx (gardes de navigation Stack.Protected), login, change-password, (tabs)/{index,informations,profile}
+mobile/components/     BrandTitle, PasswordForm, MockBanner
 mobile/context/        AuthContext (session, jeton, changement de mot de passe)
-mobile/lib/            api.ts (axios + intercepteurs + messages en français), storage.ts (SecureStore), theme.ts
+mobile/lib/            api.ts (axios + intercepteurs + messages en français), storage.ts (SecureStore), theme.ts, mock/ (mode maquette)
 mobile/types/api.ts    types du contrat d'API
 ```
 
@@ -358,6 +378,8 @@ npx expo start            # scanner le QR code avec Expo Go
 
 Avec XAMPP/Apache, l'URL est `http://<IP>/Numerise_vignette/public/api/v1`. Si le téléphone ne joint pas le serveur : pare-feu (ports 8000 et 8081), même réseau, IP de la machine à jour dans `mobile/.env` (l'accueil affiche l'état du serveur et l'URL utilisée).
 
+**Mode maquette** (PROPOSITION TECHNIQUE — À VALIDER, même esprit que D25) : construire un écran **avant** que son endpoint existe. Dans `mobile/.env`, `EXPO_PUBLIC_USE_MOCK=true` puis `npx expo start -c` : un adaptateur axios (`lib/mock/adapter.ts`) répond à la place du serveur, dans le format du contrat (§8), et un bandeau jaune « Mode maquette : données fictives » s'affiche. N'importe quel numéro et mot de passe non vides ouvrent une session factice (agent de police fictif, aucun compte ni secret) ; les informations sont quatre exemples sur deux pages, le PDF ne s'ouvre pas. **Développement seulement** : `__DEV__` vaut false dans un build de production, la variable y est ignorée. Pour ajouter un écran : une entrée dans `adapter.ts`, ses données dans `fixtures.ts` (données entièrement fictives). Quand l'endpoint est fusionné, mettre la variable à `false` : les écrans n'ont pas à changer.
+
 **Compte de test** : seul le rôle `police` se connecte à l'API. Tant que l'écran Utilisateurs (W5) n'existe pas, en créer un depuis `php artisan tinker` (le mot de passe temporaire est généré et affiché ; il devra être changé à la première connexion, ce qui montre l'écran obligatoire) :
 
 ```php
@@ -374,7 +396,7 @@ $r['temporary_password'];
 
 **Principe** (décidé par Moustapha, D31) : **Moustapha = mobile** (application Expo `mobile/`), **Amadou = Web** (Laravel : écrans Web **et API** de chaque module, selon la checklist du §6). Chacun travaille sur sa plateforme, **en parallèle** : le mobile n'attend pas la fin du Web, il avance sur le **contrat d'API** (§8). L'hébergement est **reporté** jusqu'au moment opportun : aucune tâche pour l'instant. Charge en points (1 = petite tâche, 5 = grosse) : Amadou 44 (W1 à W14), Moustapha 13 (M1 à M5), total 57.
 
-**Mobile sans attendre le Web** (PROPOSITION TECHNIQUE — À VALIDER, à mettre en place au début de M2) : pour chaque module, le contrat d'API est écrit d'abord au §8 ; l'écran mobile est développé contre des réponses factices conformes à ce contrat (`EXPO_PUBLIC_USE_MOCK=true` dans `mobile/.env`, jamais dans un build de production, même esprit que D25) ; le passage à l'API réelle se fait quand l'endpoint est fusionné, sans changer les écrans.
+**Mobile sans attendre le Web** (PROPOSITION TECHNIQUE — À VALIDER, mis en place avec M2, voir §9 « Mode maquette ») : pour chaque module, le contrat d'API est écrit d'abord au §8 ; l'écran mobile est développé contre des réponses factices conformes à ce contrat (`EXPO_PUBLIC_USE_MOCK=true`, jamais dans un build de production) ; le passage à l'API réelle se fait quand l'endpoint est fusionné, sans changer les écrans.
 
 ### Déjà fait (socle)
 
@@ -425,7 +447,7 @@ Chaque tâche suit la checklist du §6 et s'accompagne de tests ; aucune ne modi
 - **W13 Retrait VGT** : date de retrait, aperçu et impression de la carte ; cas VGT en jour, non en jour, non enregistrée (taxe).
 - **W14 SMS** : service d'envoi (opérateur à choisir avec le client), déclenché par les événements « moto retrouvée » et « paiement confirmé », en file d'attente, audité.
 - **M1 Contrôle d'une moto** : écran mobile de saisie du matricule et résultat (volée ou non, vignette à jour), à partir de l'endpoint de contrôle livré avec W11.
-- **M2 Informations (police)** : consultation des informations de W6 dans l'application.
+- **M2 Informations (police)** : consultation des informations de W6 dans l'application. **Écran fait**, contre le contrat brouillon du §8 en mode maquette ; il passera à l'API réelle quand W6 sera fusionnée (Amadou valide le contrat d'abord).
 - **M3 Authentification de la population** : comptes, connexion mobile par numéro de téléphone, activation du canal API pour le rôle `population` (`config/channels.php`), écrans de connexion. Seule tâche mobile qui modifie le socle : revue par Amadou avant fusion.
 - **M4 Demande de VGT (population)** : demande de renouvellement après un premier enregistrement, choix de la mairie, paiement, suivi.
 - **M5 Motos retrouvées et informations (population)** : consultation.
@@ -433,7 +455,7 @@ Chaque tâche suit la checklist du §6 et s'accompagne de tests ; aucune ne modi
 ### Ordre de travail de chacun
 
 - **Amadou** : W1 → W2 → W5 → W6 → W7 → W8 → W9 → W11 → W12 → W10 → W13 → W14. W3 et W4 ne bloquent personne : à prendre quand une réponse du client se fait attendre. W5 (comptes de test) et W6 (informations) passent en premier ; W11 et W12 avant W10 parce que M1 et M4 en dépendent.
-- **Moustapha** : mise en place des données factices du mobile puis M2 → M3 → M1 → M4 → M5. M2 et le socle du mobile ne dépendent d'aucune réponse du client ; M3 attend la décision sur les comptes de la population.
+- **Moustapha** : M2 (écran et mode maquette faits, en attente de l'endpoint de W6) → M3 → M1 → M4 → M5. M3 attend la décision sur les comptes de la population ; M1 et M4 attendent des réponses du client (§5).
 
 Chemin critique : W7 → W8 → W9 → W11 (endpoint de contrôle) → M1, puis W12 → M4 et W10 → M5.
 

@@ -18,6 +18,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="informations"
+        options={{
+          title: 'Informations',
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="information-outline" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profil',

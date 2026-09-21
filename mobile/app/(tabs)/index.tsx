@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Button, Card, Chip, Text } from 'react-native-paper';
+import MockBanner from '@/components/MockBanner';
 import { useAuth } from '@/context/AuthContext';
 import { API_URL, api, apiErrorMessage } from '@/lib/api';
 import { colors } from '@/lib/theme';
@@ -10,7 +11,6 @@ import { colors } from '@/lib/theme';
 // Les règles sont à valider avec le client avant leur construction (voir CLAUDE.md, §5 et §10).
 const UPCOMING = [
   { icon: 'shield-search', title: 'Contrôle d\'une moto', text: 'Moto volée ou non, vignette à jour.' },
-  { icon: 'information-outline', title: 'Informations', text: 'Communications des commissariats.' },
 ] as const;
 
 export default function HomeScreen() {
@@ -43,6 +43,7 @@ export default function HomeScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+      <MockBanner />
       {user ? (
         <Card style={styles.card}>
           <Card.Content style={{ gap: 4 }}>

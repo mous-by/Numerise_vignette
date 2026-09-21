@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { ApiErrorBody } from '@/types/api';
+import { USE_MOCK } from './mock/config';
 import { clearToken, getToken } from './storage';
 
 // EXPO_PUBLIC_API_URL doit être joignable DEPUIS LE TÉLÉPHONE : utilisez l'IP de votre machine sur le réseau local
@@ -11,6 +12,12 @@ export const api = axios.create({
   timeout: 15000,
   headers: { Accept: 'application/json' },
 });
+
+// Mode maquette (développement seulement, voir lib/mock/config.ts) : l'adaptateur répond à la place du serveur ; les
+// intercepteurs ci-dessous restent actifs, l'application se comporte donc comme avec la vraie API.
+if (USE_MOCK) {
+  api.defaults.adapter = (require('./mock/adapter') as typeof import('./mock/adapter')).mockAdapter;
+}
 
 api.interceptors.request.use(async (config) => {
   const token = await getToken();
@@ -49,6 +56,11 @@ api.interceptors.response.use(
 /** Aucune réponse n'est arrivée (hors ligne, serveur injoignable, délai dépassé). */
 export function isNetworkError(error: unknown): boolean {
   return axios.isAxiosError(error) && !error.response;
+}
+
+/** L'endpoint n'existe pas (encore) côté serveur. */
+export function isNotFound(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 404;
 }
 
 /** Code d'erreur métier renvoyé par l'API (ex. `password_change_required`). */
