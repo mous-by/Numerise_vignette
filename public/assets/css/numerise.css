@@ -1,0 +1,423 @@
+/*
+ * Styles propres à l'application, par-dessus le thème (app.css) : palette et thème « Semi Bleu », cartes, modales,
+ * boutons, tableaux, logo 3D, modules à venir. Les polices viennent de fonts.css (locales).
+ */
+
+:root {
+    --nv-accent: #1d4e89;
+    --nv-accent-2: #f97316;
+    --nv-dark: #123a63;
+    --nv-ring: rgba(29, 78, 137, .16);
+    --nv-accent-light: rgba(29, 78, 137, .08);
+    /* Survol unifié (même effet que le menu Paramètres) : fond bleu clair + texte bleu de marque. */
+    --nv-hover-bg: var(--nv-accent-light);
+    --nv-hover-fg: var(--nv-accent);
+}
+
+html.dark-theme {
+    --nv-hover-bg: rgba(255, 255, 255, .08);
+    --nv-hover-fg: #ffffff;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, "Segoe UI", sans-serif !important;
+}
+
+/* Cards */
+.card {
+    border-radius: 14px;
+    border: 1px solid rgba(15, 23, 42, .06);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, .06);
+}
+
+.card-header-brand {
+    background-color: var(--nv-accent);
+    color: #fff;
+    border: none;
+    border-radius: 13px 13px 0 0;
+    padding: .9rem 1.25rem;
+}
+
+/* Harmonisation : le bleu de marque partout où Bootstrap utilise "primary"
+   (cartes de statistiques du tableau de bord, badges, textes, bordures...),
+   pour rester cohérent avec les en-têtes de carte, les boutons et la sidebar. */
+.bg-primary {
+    background-color: var(--nv-accent) !important;
+}
+.text-primary {
+    color: var(--nv-accent) !important;
+}
+.border-primary {
+    border-color: var(--nv-accent) !important;
+}
+
+/* Modals : même bleu de marque que les en-têtes de carte, pour harmonie. */
+.modal-content {
+    border: none;
+    border-radius: 14px;
+    overflow: hidden;
+}
+.modal-header {
+    background-color: var(--nv-accent);
+    color: #fff;
+    border: none;
+    padding: .9rem 1.25rem;
+}
+.modal-header .modal-title {
+    color: #fff;
+}
+.modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Buttons */
+.btn {
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--nv-accent) 0%, var(--nv-dark) 100%);
+    border: none;
+    box-shadow: 0 8px 20px var(--nv-ring);
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+    background: linear-gradient(135deg, var(--nv-dark) 0%, var(--nv-accent) 100%) !important;
+    box-shadow: 0 10px 24px var(--nv-ring);
+}
+
+/* Forms */
+.form-control,
+.form-select {
+    border-radius: 8px;
+    border-color: #dfe5ee;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--nv-accent);
+    box-shadow: 0 0 0 .2rem var(--nv-ring);
+}
+
+.select2-container--bootstrap4 .select2-selection {
+    border-radius: 8px !important;
+    border-color: #dfe5ee !important;
+}
+
+/* Table */
+.table thead th {
+    text-transform: uppercase;
+    font-size: .72rem;
+    letter-spacing: .04em;
+    color: #64748b;
+    border-bottom-width: 2px;
+}
+
+.table > :not(caption) > * > * {
+    padding: .65rem .5rem;
+}
+
+/* Liens de menu de configuration (list-group) */
+.list-group-item {
+    border-radius: 8px !important;
+    margin-bottom: .25rem;
+    border: none;
+    color: #334155;
+    background: transparent;
+    transition: background .15s, color .15s;
+}
+
+.list-group-item:hover,
+.list-group-item:focus {
+    background: var(--nv-hover-bg) !important;
+    color: var(--nv-hover-fg) !important;
+}
+
+.list-group-item.active {
+    background-color: var(--nv-accent);
+    border-color: var(--nv-accent);
+    color: #fff;
+}
+
+/* Modal */
+.modal-content {
+    border-radius: 14px;
+    border: none;
+    box-shadow: 0 30px 60px rgba(15, 23, 42, .25);
+}
+
+.modal-header {
+    border-bottom-color: #eef1f5;
+}
+
+.modal-footer {
+    border-top-color: #eef1f5;
+}
+
+/* ============================================================
+   En-tête sidebar : logo textuel « NUMERISE » en 3D
+   (police décorative façon "Algerian" + relief)
+   ============================================================ */
+.sidebar-header .logo-3d {
+    font-family: 'Rye', Georgia, serif;
+    font-weight: 400;
+    font-size: 21px;
+    letter-spacing: 0;
+    line-height: 1;
+    white-space: nowrap;
+    margin-left: 2px;
+}
+
+.sidebar-header .logo-3d .w3d-n { margin-left: 5px; }
+
+.sidebar-header .logo-3d .w3d-w {
+    color: #1d4e89;
+    text-shadow: 1px 1px 0 #17406f, 2px 2px 0 #123457, 3px 3px 0 #0d2740, 4px 5px 5px rgba(0, 0, 0, .35);
+}
+
+.sidebar-header .logo-3d .w3d-n {
+    color: #f97316;
+    text-shadow: 1px 1px 0 #d9620c, 2px 2px 0 #b5500a, 3px 3px 0 #8a3d07, 4px 5px 5px rgba(0, 0, 0, .35);
+}
+
+/* Mini logo « NV » affiché uniquement quand la sidebar est repliée */
+.sidebar-header .logo-3d-mini {
+    font-family: 'Rye', Georgia, serif;
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--nv-accent);
+    width: 40px;
+    text-align: center;
+    line-height: 1;
+    text-shadow: 1px 1px 0 #17406f, 2px 2px 0 #123457, 3px 3px 4px rgba(0, 0, 0, .3);
+    display: none;
+}
+
+.wrapper.toggled:not(.sidebar-hovered) .sidebar-header .logo-3d-mini {
+    display: inline-block;
+}
+
+/* Actions rapides du tableau de bord */
+.quick-action { transition: transform .15s ease, box-shadow .15s ease; }
+.quick-action:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(29, 78, 137, .15); }
+
+/* ============================================================
+   Thème "Semi Bleu" : thème par défaut.
+   Même principe que "Semi Dark" (sidebar sombre, contenu clair)
+   mais avec le bleu de marque déjà utilisé pour les card-header-brand.
+   ============================================================ */
+html.semi-bleu .sidebar-wrapper {
+    background: linear-gradient(180deg, #0b2e4f 0%, #123a63 100%);
+    border-right: 1px solid #00000000;
+}
+html.semi-bleu .sidebar-wrapper .sidebar-header {
+    background: transparent;
+    border-right: 1px solid #00000000;
+    border-bottom: 1px solid rgba(255, 255, 255, .15);
+}
+html.semi-bleu .sidebar-wrapper .sidebar-header .logo-text {
+    color: #fff;
+}
+html.semi-bleu .sidebar-wrapper .sidebar-header .toggle-icon {
+    color: #fff;
+}
+html.semi-bleu .sidebar-wrapper .sidebar-header .logo-3d .w3d-w {
+    color: #7fb0e8;
+}
+html.semi-bleu .sidebar-wrapper .sidebar-header .logo-3d-mini {
+    color: #7fb0e8;
+}
+html.semi-bleu .sidebar-wrapper .metismenu a {
+    color: #c7d6e8;
+}
+html.semi-bleu .sidebar-wrapper .metismenu a:hover,
+html.semi-bleu .sidebar-wrapper .metismenu a:focus,
+html.semi-bleu .sidebar-wrapper .metismenu a:active,
+html.semi-bleu .sidebar-wrapper .metismenu .mm-active>a {
+    color: #fff;
+    text-decoration: none;
+    background: rgba(255, 255, 255, .18);
+}
+html.semi-bleu .sidebar-wrapper .metismenu ul {
+    border: 1px solid #00000000;
+    background: rgba(255, 255, 255, .08);
+}
+html.semi-bleu .simplebar-scrollbar:before {
+    background: rgba(255, 255, 255, .4);
+}
+
+/* Semi Bleu : en-tête (topbar) et pied de page dans le même bleu que la sidebar */
+html.semi-bleu .topbar {
+    background-color: #123a63;
+    border-bottom: 1px solid rgba(255, 255, 255, .12);
+}
+html.semi-bleu .page-footer {
+    background-color: #123a63;
+    border-top: 1px solid rgba(255, 255, 255, .12);
+    color: rgba(255, 255, 255, .75);
+}
+html.semi-bleu .mobile-toggle-menu,
+html.semi-bleu .toggle-icon,
+html.semi-bleu .topbar .navbar-nav .nav-link,
+html.semi-bleu .topbar .top-menu-left .nav-item .nav-link {
+    color: #fff;
+}
+html.semi-bleu .user-info .user-name {
+    color: #fff;
+}
+html.semi-bleu .user-info .designattion {
+    color: rgba(255, 255, 255, .7);
+}
+html.semi-bleu .search-bar input {
+    color: #fff;
+    background-color: rgba(255, 255, 255, .12);
+    border: 1px solid rgba(255, 255, 255, .18);
+}
+html.semi-bleu .search-bar input::placeholder {
+    color: rgba(255, 255, 255, .65) !important;
+    opacity: 1 !important;
+}
+
+/* Recherche des tableaux (DataTables) sur mobile : par défaut le plugin
+   centre "Afficher X éléments" et "Rechercher :" en dessous de 768px, ce qui
+   les désaligne l'un de l'autre (le champ de recherche, presque aussi large
+   que la colonne, bouge à peine ; le sélecteur "Afficher", plus étroit,
+   se retrouve décalé vers la droite). On les aligne à gauche et on donne au
+   champ de recherche toute la largeur disponible pour un usage tactile. */
+@media (max-width: 767.98px) {
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter {
+        text-align: left;
+        margin-bottom: .75rem;
+    }
+    .dataTables_wrapper .dataTables_length label,
+    .dataTables_wrapper .dataTables_filter label {
+        display: flex;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: .5rem;
+        width: 100%;
+        margin-bottom: 0;
+    }
+    .dataTables_wrapper .dataTables_filter input[type="search"] {
+        flex: 1 1 auto;
+        min-width: 0;
+        margin-left: 0 !important;
+    }
+}
+
+/* Modules à venir dans la sidebar (D25) : entrées visibles mais atténuées, avec une pastille « À venir ». */
+.sidebar-wrapper .metismenu li.planned > a {
+    opacity: .8;
+}
+
+.sidebar-wrapper .metismenu li.planned > a:hover {
+    opacity: 1;
+}
+
+.sidebar-wrapper .metismenu .planned-badge {
+    margin-left: auto;
+    padding: .1rem .45rem;
+    border-radius: 999px;
+    font-size: .6rem;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    color: #123a63;
+    background: #f4d35e;
+    white-space: nowrap;
+}
+
+html.semi-bleu .sidebar-wrapper .metismenu .menu-label {
+    color: #7fb0e8;
+}
+
+/* Paramètres : bloc du bas de la sidebar, séparé des autres menus. */
+.sidebar-wrapper .metismenu li.sidebar-bottom {
+    margin-top: 1rem;
+    padding-top: .5rem;
+    border-top: 1px solid rgba(255, 255, 255, .15);
+}
+
+/* ============================================================
+   Survol unifié : le même effet partout (référence : menu Paramètres).
+   Fond bleu clair, texte bleu de marque, transition douce. La sidebar, sur fond sombre, a son équivalent clair
+   (thème Semi Bleu) ; les boutons pleins gardent leur propre survol.
+   ============================================================ */
+.dropdown-menu .dropdown-item,
+.nav-tabs .nav-link,
+.page-link,
+.select2-container--bootstrap4 .select2-results__option {
+    transition: background .15s, color .15s;
+}
+
+/* Menus déroulants : profil, notifications, actions */
+.dropdown-menu .dropdown-item:hover,
+.dropdown-menu .dropdown-item:focus {
+    background: var(--nv-hover-bg) !important;
+    color: var(--nv-hover-fg) !important;
+}
+
+.dropdown-menu .dropdown-item:active,
+.dropdown-menu .dropdown-item.active {
+    background: var(--nv-accent) !important;
+    color: #fff !important;
+}
+
+/* Menu du profil : entrées arrondies et décollées des bords, comme les entrées des Paramètres */
+.user-box .dropdown-menu {
+    padding: .35rem 0;
+}
+
+.user-box .dropdown-menu .dropdown-item {
+    border-radius: 8px;
+    margin: 2px 6px;
+    width: calc(100% - 12px);
+}
+
+/* Onglets */
+.nav-tabs .nav-link:hover,
+.nav-tabs .nav-link:focus {
+    background: var(--nv-hover-bg);
+    color: var(--nv-hover-fg);
+    border-color: transparent;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--nv-accent);
+    font-weight: 600;
+}
+
+/* Pagination des tableaux */
+.page-link:hover,
+.page-link:focus {
+    background: var(--nv-hover-bg);
+    color: var(--nv-hover-fg);
+}
+
+.page-item.active .page-link {
+    background: var(--nv-accent);
+    border-color: var(--nv-accent);
+    color: #fff;
+}
+
+/* Listes déroulantes Select2 */
+.select2-container--bootstrap4 .select2-results__option--highlighted[aria-selected],
+.select2-container--bootstrap4 .select2-results__option--highlighted {
+    background: var(--nv-hover-bg) !important;
+    color: var(--nv-hover-fg) !important;
+}
+
+.select2-container--bootstrap4 .select2-results__option[aria-selected=true] {
+    background: var(--nv-accent) !important;
+    color: #fff !important;
+}
+
+/* Lignes de tableau au survol (tables .table-hover) */
+.table-hover > tbody > tr:hover > * {
+    --bs-table-accent-bg: var(--nv-hover-bg);
+    color: inherit;
+}

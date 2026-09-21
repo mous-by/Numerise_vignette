@@ -9,12 +9,11 @@ class DatabaseSeeder extends Seeder
     /**
      * Seed the application's database.
      *
-     * Volontairement vide à l'étape 1. Le socle n'amorcera que les rôles
-     * (RoleSeeder, étape 4) : aucun compte, aucun mot de passe dans Git.
-     * Les superadmins se créent avec `php artisan app:create-superadmin`.
+     * Rôles et permissions (RoleSeeder), puis les superadmins déclarés dans .env (SuperadminSeeder, D27). Aucun
+     * compte ni mot de passe dans Git ; `php artisan app:create-superadmin` reste disponible (mot de passe interactif).
      */
     public function run(): void
     {
-        //
+        $this->call([RoleSeeder::class, SuperadminSeeder::class]);
     }
 }

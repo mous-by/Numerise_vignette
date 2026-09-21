@@ -142,7 +142,6 @@ return [
     'custom' => [],
     'attributes' => [
         'name' => 'nom',
-        'username' => 'identifiant',
         'phone' => 'numéro de téléphone',
         'password' => 'mot de passe',
         'password_confirmation' => 'confirmation du mot de passe',
