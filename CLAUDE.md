@@ -12,6 +12,7 @@ Ce fichier est la **seule documentation** du dépôt. Il se lit en entier avant 
 6. Toute action sensible est journalisée dans `activity_logs`. Tout modèle métier utilise `LogsActivity`. Les permissions ne se créent pas « à la main » dans la base (§4.4).
 7. Avant de conclure une tâche : `composer test` vert, `vendor/bin/pint` propre, et la tâche vérifiée dans le navigateur ou sur le mobile.
 8. Un fichier `.md` de plus n'est pas souhaité : mets à jour **ce fichier**.
+9. **Le gabarit du thème est impératif** (§7, « Règles impératives de l'interface Web ») : en-têtes de carte en bleu de marque, tableaux au style du thème, et **modales** plutôt que pages séparées pour créer, modifier, consulter et supprimer. Une vue qui s'en écarte est refusée à la revue.
 
 ### 0.1 Début de session (assistant IA)
 
@@ -39,7 +40,7 @@ Ce fichier est la **seule documentation** du dépôt. Il se lit en entier avant 
    - Pas d'`update()` de masse sans audit ; pas de permission créée à la main en base (manifeste + `php artisan permissions:sync`).
    - Rien de secret dans Git : `.env`, mots de passe, numéros réels, jetons. Aucun CDN, aucun Vite ni Tailwind (D19).
    - Ne pas modifier `config/planned_modules.php` : l'entrée d'un module disparaît quand son manifeste existe. Un module ne modifie pas les fichiers du socle (§6).
-   - Vues : `@extends('layouts.admin')`, composants existants (`card-header-brand`, survol unifié §7), pas de CSS ad hoc. Textes visibles en français ; tables et colonnes en anglais (D3).
+   - Vues : **respecte le gabarit du thème (§7, impératif)** : `@extends('layouts.admin')`, `card-header card-header-brand` sur toute carte, tableaux `table` initialisés en DataTables, création / modification / détail / suppression en **modales** (pas de page `create`, `edit` ou `show`), survol unifié ; pas de CSS ad hoc. Modèles : `resources/views/permissions/index.blade.php` et `resources/views/roles/index.blade.php`. Textes visibles en français ; tables et colonnes en anglais (D3).
    - Un serveur déjà lancé sur le port 8000 est peut-être celui du développeur : ne le tue pas, lance `php artisan serve --port=8001`.
 6. **Git** : dépôt `git@github.com:mous-by/Numerise_vignette.git` (`origin`). Depuis l'import initial, on ne pousse plus directement sur `main` : une branche `feature/<id>-<nom>` par tâche, une Pull Request (interface web de GitHub), la revue de l'autre développeur. Messages de commit en français avec préfixe (`feat(W1) : …`, `fix : …`, `test : …`, `docs : …`). Avant de pousser : `composer test`, `vendor/bin/pint --test` (et `npm run typecheck` côté mobile). **L'assistant ne commite ni ne pousse que si son développeur le demande.**
 
@@ -273,6 +274,16 @@ Cas particuliers : lecture inter-institutions (`acrossCommissariats()`, avec per
 - **Thème** « Dashkote Admin » (codervent) + styles propres `public/assets/css/numerise.css` (palette : bleu `#1d4e89`, bleu foncé `#123a63`, orange `#f97316` ; thème « Semi Bleu » par défaut ; police Inter ; icônes Boxicons). Toute la structure dépend de `resources/views/layouts/admin.blade.php` et `partials/` ; les vues de contenu sont en Bootstrap 5.
 - **Sidebar** : Tableau de bord, entrées des manifestes (filtrées par permission, si la route existe), section « Modules à venir » (fiches sans donnée), puis **Paramètres** tout en bas (Rôles, Permissions, Attribution s'ouvrent depuis son sous-menu).
 - **Gabarit d'une page** : fil d'ariane + bouton d'action, `card` à bandeau `card-header-brand`, tableaux DataTables (libellés français), modales à en-tête bleu, alertes SweetAlert2 (`session('status')`, `session('error')`).
+### Règles impératives de l'interface Web (gabarit du thème)
+
+Le rendu du thème est une exigence : une vue qui s'en écarte est refusée à la revue. Les écrans existants (`resources/views/permissions/index.blade.php`, `roles/index.blade.php`) sont les modèles à recopier.
+
+1. **En-tête de carte** : toute carte de contenu ouvre par `<div class="card-header card-header-brand …">` (fond bleu de marque, texte blanc), avec un titre `<h6 class="mb-0 text-white"><i class='bx bx-…'></i>TITRE EN MAJUSCULES</h6>` et, à droite, les boutons d'action `btn btn-light btn-sm` (`d-flex align-items-center justify-content-between flex-wrap gap-2`). Jamais d'en-tête blanc, gris ou d'une autre couleur.
+2. **Tableaux** : `<table class="table" id="…">` avec un `<thead>` **sans classe de couleur** : le style du thème (libellés en majuscules, petit corps, gris) vient de `numerise.css`. Pas de `table-dark`, `table-primary` ni de fond ad hoc. Le tableau est initialisé en DataTables (libellés français). Boutons d'action `btn btn-primary btn-sm` avec une icône Boxicons, dans une colonne étroite (`width="10%"`).
+3. **Modales plutôt que pages séparées** : créer, modifier, consulter le détail et confirmer une suppression se font dans une **modale** ouverte depuis la liste (`modal fade`, `modal-dialog modal-dialog-centered`, `modal-lg` si besoin ; `modal-header` bleu de marque avec `modal-title` et icône, `btn-close`, corps, `modal-footer`). Pas de page `create`, `edit` ni `show` pour une fiche simple (commissariat, mairie, utilisateur, propriétaire, moto, information, déclaration, paiement…). Une page dédiée n'est admise que pour un formulaire long à plusieurs sections ou lignes, avec l'accord du relecteur.
+4. **Erreurs de validation** : la modale se rouvre avec les erreurs (`@error`, `old()`, script `new bootstrap.Modal(…).show()` si `$errors->has(…)`). Confirmation d'une suppression : SweetAlert2. Messages de succès et d'erreur : `session('status')` et `session('error')`, affichés par le layout.
+5. **Fil d'ariane** en tête de page (`page-breadcrumb`, `breadcrumb-title`), puis `<hr />`, comme les écrans existants.
+
 - **Identité** : `config/brand.php` (nom, logo 3D bicolore, sigle, slogan).
 - **Assets** : tout est local (`public/assets/`) ; un test d'architecture échoue si une vue ou un CSS référence une ressource externe.
 
@@ -429,11 +440,11 @@ Hors périmètre pour l'instant : QR Code et Mobile Money (phase 1 ou plus tard,
 
 ### Détail des tâches
 
-Chaque tâche suit la checklist du §6 et s'accompagne de tests ; aucune ne modifie le socle sans revue. **Chaque tâche Web fournit l'API que consomment les tâches mobiles qui en dépendent** (contrôleur `Api/V1`, Resource, route, contrat §8), Les endpoints de la population sont **publics** (D32).
+Chaque tâche suit la checklist du §6, les **règles impératives de l'interface** (§7 : cartes à en-tête bleu, tableaux du thème, création, modification, détail et suppression en modales) et s'accompagne de tests ; aucune ne modifie le socle sans revue. **Chaque tâche Web fournit l'API que consomment les tâches mobiles qui en dépendent** (contrôleur `Api/V1`, Resource, route, contrat §8), Les endpoints de la population sont **publics** (D32).
 
 - **W1 Commissariats** (`commissariats.view/create/update/delete`) : liste DataTables, création et édition en modale (nom, code), activation/désactivation (désactiver coupe l'accès de tous les utilisateurs de l'institution : sessions et jetons supprimés), suppression en soft delete, `CommissariatPolicy`, FormRequests, `routes/web/commissariats.php`, audit. Le manifeste existe (`config/modules/commissariats.php`) : l'entrée de menu apparaît dès que la route `commissariats.index` existe (le menu Paramètres la liste déjà).
 - **W2 Mairies** : identique à W1 (`config/modules/mairies.php`, route `mairies.index`).
-- **W3 Audit** (`audit.view`) : liste filtrable (auteur, module, action, dates, acteur superadmin) et détail avec anciennes et nouvelles valeurs ; actions du superadmin signalées ; lecture seule.
+- **W3 Audit** (`audit.view`) : liste filtrable (auteur, module, action, dates, acteur superadmin) et détail **en modale** avec anciennes et nouvelles valeurs ; actions du superadmin signalées ; lecture seule.
 - **W4 Système** (`system.view`, `system.maintain`) : environnement, base, file d'attente, jobs échoués en lecture seule ; actions de maintenance sur liste blanche (vider le cache), journalisées ; rien de destructeur.
 - **W5 Utilisateurs** (`users.*`) : liste (`User::visibleTo`), création par `UserProvisioningService::create` (mot de passe temporaire affiché **une seule fois**), modification, activer/désactiver, réinitialiser le mot de passe, révoquer sessions et jetons, suppression (soft), changement d'institution (admin national et superadmin), `UserPolicy` (plafond de rôle, D9 : le commissaire ne gère que sa police). Touche au service de comptes du socle. Une fois livrée, elle permet de créer les comptes police pour tester le mobile (en attendant : `tinker`, §9).
 - **W6 Informations** : le commissaire publie (description, fichier PDF, image), la mairie, la police et la population consultent (cahier §8, §9). Fournit l'endpoint de lecture consommé par M2 et M5, **public** (D32) : W6 introduit donc le limiteur par IP et l'entrée de la liste blanche du test d'architecture, à relire par les deux. Permissions à définir dans le manifeste (PROPOSITION TECHNIQUE — À VALIDER).
