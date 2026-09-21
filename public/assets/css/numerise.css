@@ -421,3 +421,10 @@ html.semi-bleu .sidebar-wrapper .metismenu .menu-label {
     --bs-table-accent-bg: var(--nv-hover-bg);
     color: inherit;
 }
+
+/* Tableaux : le thème impose « white-space: nowrap » dans .table-responsive, donc un texte long ne revient jamais à la
+   ligne et pousse les dernières colonnes (boutons d'action) hors de la carte. Une cellule de texte libre reçoit cette classe. */
+.table .cell-wrap {
+    white-space: normal;
+    min-width: 220px;
+}
