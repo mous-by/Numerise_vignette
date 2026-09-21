@@ -15,7 +15,7 @@ Ce fichier est la **seule documentation** du dépôt. Il se lit en entier avant 
 
 ### 0.1 Début de session (assistant IA)
 
-1. **Sache pour qui tu travailles.** Lis `git config user.name` (ou demande au développeur) : **Moustapha BARRY = mobile** (`mobile/`, tâches M1, M2, M4, M5) ; **Amadou KAREMBE = Web** (code Laravel, tâches W1 à W14, API des modules comprise). Tu ne modifies que les fichiers de ta plateforme : `mobile/` est à Moustapha, le code Laravel est à Amadou. Les points de jonction sont le contrat d'API (§8, discuté avant d'être changé) et les routes publiques de la population (D32), qui touchent au socle et se relisent à deux. Le socle et ce fichier ne changent qu'avec l'accord des deux.
+1. **Sache pour qui tu travailles.** Lis `git config user.name` (ou demande au développeur) : **Moustapha BARRY = mobile** (`mobile/`, tâches M1, M2, M4, M5) **et les écrans Web Audit et Système** (W3, W4) ; **Amadou KAREMBE = Web** (code Laravel, tâches W1, W2 et W5 à W14, API des modules comprise). Tu ne modifies que les fichiers de tes tâches : `mobile/` est à Moustapha, le code Laravel est à Amadou, sauf les écrans Audit et Système (W3, W4) qui sont à Moustapha. Les points de jonction sont le contrat d'API (§8, discuté avant d'être changé) et les routes publiques de la population (D32), qui touchent au socle et se relisent à deux. Le socle et ce fichier ne changent qu'avec l'accord des deux.
 2. **Lis ce fichier en entier** (§4 architecture, §5 décisions, §6 ajout d'un module, §10 tâches), puis `docs/cahier_Plateforme.pdf` pour le module que tu construis. Le cahier prime sur toute idée ; ce qui n'y est pas est « À VALIDER AVEC LE CLIENT ».
 3. **Vérifie l'environnement avant de coder** (§3) : `composer install`, `.env`, les deux bases, `php artisan migrate --seed`, puis `composer test` **vert avant ta première modification** (côté mobile : `npm run typecheck` dans `mobile/`).
 4. **Imite l'existant, ne réinvente pas.** Fichiers de référence :
@@ -241,7 +241,7 @@ tests/                 Feature, Unit, Architecture
 | D28 | Nom de la plateforme : **VigiMoto** (proposé, modifiable dans `config/brand.php` + `APP_NAME`). Le dépôt et le dossier restent `Numerise_vignette` |
 | D29 | Application mobile : **Expo (React Native) dans le dossier `mobile/`** du même dépôt, testée avec Expo Go ; elle ne consomme que l'API `/api/v1` |
 | D30 | Un seul fichier `.md` dans le dépôt : ce guide |
-| D31 | **Répartition par plateforme** : Moustapha = **mobile** (M1, M2, M4, M5), Amadou = **Web** (W1 à W14, avec l'API de chaque module). Les deux travaillent en parallèle : le mobile avance sur le contrat d'API (§8) sans attendre le Web. Hébergement **reporté** jusqu'au moment opportun (aucune tâche pour l'instant). Charge : 10 points contre 44 (§10) |
+| D31 | **Répartition par plateforme** : Moustapha = **mobile** (M1, M2, M4, M5) et les écrans Web **Audit** et **Système** (W3, W4), Amadou = **Web** (W1, W2, W5 à W14, avec l'API de chaque module). Les deux travaillent en parallèle : le mobile avance sur le contrat d'API (§8) sans attendre le Web. Hébergement **reporté** jusqu'au moment opportun (aucune tâche pour l'instant). Charge : 15 points contre 39 (§10) |
 | D32 | **La population n'a pas d'authentification** (décision de Moustapha, conforme au cahier §7 « Sécurité » : seuls la police, les commissaires et les agents de mairie utilisent la connexion). Elle consulte les informations et les motos retrouvées, et demande une VGT **sans compte**, par des routes **publiques** de l'API (sans jeton, limitées par IP, lecture seule sauf la demande de VGT). Comment elle s'identifie pour la demande (matricule, téléphone enregistré, code reçu par SMS : le cahier §8 parle d'un « sms pour la confirmation ») : À VALIDER AVEC LE CLIENT. Supprime la tâche M3 |
 
 ### Points ouverts — client (À VALIDER AVEC LE CLIENT)
@@ -394,7 +394,7 @@ $r['temporary_password'];
 
 ## 10. Répartition du travail
 
-**Principe** (décidé par Moustapha, D31) : **Moustapha = mobile** (application Expo `mobile/`), **Amadou = Web** (Laravel : écrans Web **et API** de chaque module, selon la checklist du §6). Chacun travaille sur sa plateforme, **en parallèle** : le mobile n'attend pas la fin du Web, il avance sur le **contrat d'API** (§8). L'hébergement est **reporté** jusqu'au moment opportun : aucune tâche pour l'instant. Charge en points (1 = petite tâche, 5 = grosse) : Amadou 44 (W1 à W14), Moustapha 10 (M1, M2, M4, M5), total 54. La tâche M3 (authentification de la population) est supprimée par D32.
+**Principe** (décidé par Moustapha, D31) : **Moustapha = mobile** (application Expo `mobile/`) **plus les écrans Web Audit et Système** (W3, W4, sans dépendance ni blocage client), **Amadou = Web** (Laravel : écrans Web **et API** de chaque module, selon la checklist du §6). Chacun travaille sur sa plateforme, **en parallèle** : le mobile n'attend pas la fin du Web, il avance sur le **contrat d'API** (§8). L'hébergement est **reporté** jusqu'au moment opportun : aucune tâche pour l'instant. Charge en points (1 = petite tâche, 5 = grosse) : Amadou 39 (W1, W2, W5 à W14), Moustapha 15 (W3, W4, M1, M2, M4, M5), total 54. La tâche M3 (authentification de la population) est supprimée par D32.
 
 **Mobile sans attendre le Web** (PROPOSITION TECHNIQUE — À VALIDER, mis en place avec M2, voir §9 « Mode maquette ») : pour chaque module, le contrat d'API est écrit d'abord au §8 ; l'écran mobile est développé contre des réponses factices conformes à ce contrat (`EXPO_PUBLIC_USE_MOCK=true`, jamais dans un build de production) ; le passage à l'API réelle se fait quand l'endpoint est fusionné, sans changer les écrans.
 
@@ -408,8 +408,8 @@ Authentification Web et API, rôles, permissions à deux voies, audit, cloisonne
 |---|---|---|---|---|---|
 | W1 | Écran **Commissariats** | 3 | — | non | Amadou |
 | W2 | Écran **Mairies** | 2 | W1 (même patron) | non | Amadou |
-| W3 | Écran **Audit** | 3 | — | non | Amadou |
-| W4 | Page **Système** | 2 | — | non | Amadou |
+| W3 | Écran **Audit** | 3 | — | non | Moustapha |
+| W4 | Page **Système** | 2 | — | non | Moustapha |
 | W5 | Écran **Utilisateurs** | 5 | W1, W2 | non | Amadou |
 | W6 | Module **Informations** (Web + API) | 3 | — | non | Amadou |
 | W7 | Module **Propriétaires** | 3 | — | plusieurs motos par propriétaire, historique des changements | Amadou |
@@ -452,8 +452,8 @@ Chaque tâche suit la checklist du §6 et s'accompagne de tests ; aucune ne modi
 
 ### Ordre de travail de chacun
 
-- **Amadou** : W1 → W2 → W5 → W6 → W7 → W8 → W9 → W11 → W12 → W10 → W13 → W14. W3 et W4 ne bloquent personne : à prendre quand une réponse du client se fait attendre. W5 (comptes de test) et W6 (informations) passent en premier ; W11 et W12 avant W10 parce que M1 et M4 en dépendent.
-- **Moustapha** : M2 (écran et mode maquette faits, en attente de l'endpoint de W6) → M1 → M4 → M5. M1 et M4 attendent des réponses du client (§5).
+- **Amadou** : W1 → W2 → W5 → W6 → W7 → W8 → W9 → W11 → W12 → W10 → W13 → W14. W5 (comptes de test) et W6 (informations) passent en premier ; W11 et W12 avant W10 parce que M1 et M4 en dépendent.
+- **Moustapha** : **W3 → W4 dès maintenant** (aucune dépendance, aucun blocage client), M2 (écran et mode maquette faits, en attente de l'endpoint de W6), puis M1 → M4 → M5, qui attendent des réponses du client (§5) et les endpoints d'Amadou.
 
 Chemin critique : W7 → W8 → W9 → W11 (endpoint de contrôle) → M1, puis W12 → M4 et W10 → M5.
 
