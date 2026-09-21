@@ -11,7 +11,6 @@ return [
 
     'roles' => [],
 
-    'navigation' => [
-        ['label' => 'Audit', 'icon' => 'bx bx-list-check', 'route' => 'audit.index', 'permission' => 'audit.view', 'active' => 'audit.*', 'order' => 90],
-    ],
+    // Pas d'entrée de sidebar : l'écran s'ouvre depuis le sous-menu Paramètres (configuration/_menu.blade.php).
+    'navigation' => [],
 ];

@@ -63,7 +63,7 @@ Cas d'usage : (1) enregistrement initial et acquisition de la VGT au commissaria
 
 **Fait** (socle Web, API et mobile de base) :
 - Authentification Web par **numéro de téléphone**, mot de passe temporaire à changer, 5 tentatives, comptes et institutions désactivables à chaud.
-- 6 rôles, hiérarchie, plafond de rôle, **permissions à deux voies** (manifestes + création depuis l'interface), écrans Rôles, Permissions, Attribution (menu **Paramètres**).
+- 6 rôles, hiérarchie, plafond de rôle, **permissions à deux voies** (manifestes + création depuis l'interface), écrans Rôles, Permissions, Attribution, **Audit** (W3) et **Système** (W4) (menu **Paramètres**).
 - Audit synchrone immuable, cloisonnement institutionnel fail-closed, protection du dernier superadmin, superadmins créés automatiquement.
 - Tableau de bord (deux vues) en données fictives activables, sidebar listant tous les modules à venir, **Paramètres** en bas de la sidebar.
 - Profil à deux onglets (informations, mot de passe), page de connexion avec formulaire à droite et diaporama d'images, survol unifié dans toute l'interface.
@@ -272,7 +272,7 @@ Cas particuliers : lecture inter-institutions (`acrossCommissariats()`, avec per
 ## 7. Interface Web
 
 - **Thème** « Dashkote Admin » (codervent) + styles propres `public/assets/css/numerise.css` (palette : bleu `#1d4e89`, bleu foncé `#123a63`, orange `#f97316` ; thème « Semi Bleu » par défaut ; police Inter ; icônes Boxicons). Toute la structure dépend de `resources/views/layouts/admin.blade.php` et `partials/` ; les vues de contenu sont en Bootstrap 5.
-- **Sidebar** : Tableau de bord, entrées des manifestes (filtrées par permission, si la route existe), section « Modules à venir » (fiches sans donnée), puis **Paramètres** tout en bas (Rôles, Permissions, Attribution s'ouvrent depuis son sous-menu).
+- **Sidebar** : Tableau de bord, entrées des manifestes (filtrées par permission, si la route existe), section « Modules à venir » (fiches sans donnée), puis **Paramètres** tout en bas (Rôles, Permissions, Attribution, **Audit** et **Système** s'ouvrent depuis son sous-menu, `configuration/_menu.blade.php` : un écran de Paramètres n'a pas d'entrée de sidebar, son manifeste déclare `navigation => []`).
 - **Gabarit d'une page** : fil d'ariane + bouton d'action, `card` à bandeau `card-header-brand`, tableaux DataTables (libellés français), modales à en-tête bleu, alertes SweetAlert2 (`session('status')`, `session('error')`).
 ### Règles impératives de l'interface Web (gabarit du thème)
 

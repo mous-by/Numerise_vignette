@@ -17,7 +17,7 @@
     <hr />
 
     <div class="row">
-        <div class="col-12 col-lg-4">
+        <div class="col-12 col-lg-3">
             @include('configuration._menu')
 
             <div class="card">
@@ -29,7 +29,7 @@
             </div>
         </div>
 
-        <div class="col-12 col-lg-8">
+        <div class="col-12 col-lg-9">
             <div class="card">
                 <div class="card-header card-header-brand d-flex align-items-center justify-content-between flex-wrap gap-2">
                     <h6 class="mb-0 text-white"><i class='bx bx-shield-alt-2 me-2'></i>RÉFÉRENTIEL DES PERMISSIONS</h6>

@@ -14,6 +14,6 @@ return [
 
     'navigation' => [
         // Point d'entrée de la zone Paramètres (Rôles, Permissions, Attribution, ...), toujours en bas de la sidebar.
-        ['label' => 'Paramètres', 'icon' => 'bx bx-cog', 'route' => 'roles.index', 'permission' => 'roles.view', 'active' => ['roles.*', 'permissions.*', 'user-permissions.*', 'users.permissions.*'], 'position' => 'bottom', 'order' => 900],
+        ['label' => 'Paramètres', 'icon' => 'bx bx-cog', 'route' => 'roles.index', 'permission' => 'roles.view', 'active' => ['roles.*', 'permissions.*', 'user-permissions.*', 'users.permissions.*', 'audit.*', 'system.*'], 'position' => 'bottom', 'order' => 900],
     ],
 ];

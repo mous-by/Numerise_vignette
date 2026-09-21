@@ -12,7 +12,6 @@ return [
 
     'roles' => [],
 
-    'navigation' => [
-        ['label' => 'Système', 'icon' => 'bx bx-server', 'route' => 'system.index', 'permission' => 'system.view', 'active' => 'system.*', 'order' => 100],
-    ],
+    // Pas d'entrée de sidebar : l'écran s'ouvre depuis le sous-menu Paramètres (configuration/_menu.blade.php).
+    'navigation' => [],
 ];

@@ -174,17 +174,33 @@ class DashboardAndModulesTest extends TestCase
         $this->assertStringNotContainsString('Attribution', $sidebar);
         $this->assertStringNotContainsString('bx-shield-alt-2', $sidebar);
         $this->assertStringNotContainsString('bx-user-check', $sidebar);
+        // Audit et Système non plus (W3, W4) : ils s'ouvrent depuis Paramètres.
+        $this->assertStringNotContainsString('bx-list-check', $sidebar);
+        $this->assertStringNotContainsString('bx-server', $sidebar);
 
         // Ils restent accessibles depuis la zone Paramètres.
         $page = $this->get('/roles')->assertOk()->assertSee('PARAMÈTRES');
-        $page->assertSee('Permissions')->assertSee('Attribution des permissions')->assertSee('Rôles');
+        $page->assertSee('Permissions')->assertSee('Attribution des permissions')->assertSee('Rôles')
+            ->assertSee(route('audit.index'))->assertSee(route('system.index'));
+    }
+
+    public function test_audit_and_system_are_reached_from_the_settings_menu_and_show_it(): void
+    {
+        $superadmin = $this->superadmin();
+
+        foreach (['/audit' => 'audit.index', '/system' => 'system.index'] as $uri => $route) {
+            $this->actingAs($superadmin)->get($uri)->assertOk()
+                ->assertSee('PARAMÈTRES')
+                ->assertSee('list-group-item list-group-item-action active', false)
+                ->assertSee(route($route));
+        }
     }
 
     public function test_settings_stays_highlighted_on_every_settings_page(): void
     {
         $superadmin = $this->superadmin();
 
-        foreach (['/roles', '/permissions', '/user-permissions'] as $uri) {
+        foreach (['/roles', '/permissions', '/user-permissions', '/audit', '/system'] as $uri) {
             $sidebar = $this->sidebar($this->actingAs($superadmin)->get($uri)->getContent());
             $this->assertMatchesRegularExpression('#mm-active[^>]*>\s*<div class="parent-icon"><i class=\'bx bx-cog\'#', $sidebar, "Paramètres doit être actif sur $uri");
         }

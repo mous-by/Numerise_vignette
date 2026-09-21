@@ -4,12 +4,12 @@
 
 @section('content')
     <div class="page-breadcrumb d-flex flex-wrap gap-2 align-items-center mb-3">
-        <div class="breadcrumb-title pe-3">Système</div>
+        <div class="breadcrumb-title pe-3">Paramètres</div>
         <div class="ps-3">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0 p-0">
                     <li class="breadcrumb-item"><a href="{{ route('home') }}"><i class="bx bx-home-alt"></i></a></li>
-                    <li class="breadcrumb-item active" aria-current="page">État de l'installation</li>
+                    <li class="breadcrumb-item active" aria-current="page">Système</li>
                 </ol>
             </nav>
         </div>
@@ -17,7 +17,13 @@
     <hr />
 
     <div class="row">
-        <div class="col-12 col-xl-6">
+        <div class="col-12 col-lg-3">
+            @include('configuration._menu')
+        </div>
+
+        <div class="col-12 col-lg-9">
+    <div class="row">
+        <div class="col-12">
             <div class="card">
                 <div class="card-header card-header-brand d-flex align-items-center justify-content-between flex-wrap gap-2">
                     <h6 class="mb-0 text-white"><i class='bx bx-server me-2'></i>ENVIRONNEMENT</h6>
@@ -43,7 +49,7 @@
             </div>
         </div>
 
-        <div class="col-12 col-xl-6">
+        <div class="col-12">
             <div class="card">
                 <div class="card-header card-header-brand d-flex align-items-center justify-content-between flex-wrap gap-2">
                     <h6 class="mb-0 text-white"><i class='bx bx-data me-2'></i>BASE DE DONNÉES</h6>
@@ -67,7 +73,7 @@
             </div>
         </div>
 
-        <div class="col-12 col-xl-6">
+        <div class="col-12">
             <div class="card">
                 <div class="card-header card-header-brand">
                     <h6 class="mb-0 text-white"><i class='bx bx-layer me-2'></i>FILE D'ATTENTE, CACHE ET SESSIONS</h6>
@@ -86,7 +92,7 @@
             </div>
         </div>
 
-        <div class="col-12 col-xl-6">
+        <div class="col-12">
             <div class="card">
                 <div class="card-header card-header-brand">
                     <h6 class="mb-0 text-white"><i class='bx bx-wrench me-2'></i>MAINTENANCE</h6>
@@ -137,6 +143,8 @@
                     </tbody>
                 </table>
             @endif
+        </div>
+    </div>
         </div>
     </div>
 @endsection

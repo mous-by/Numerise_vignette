@@ -7,6 +7,8 @@
         ['roles.index', 'roles.view', 'Rôles', 'bx bx-id-card', 'roles.*'],
         ['permissions.index', 'permissions.view', 'Permissions', 'bx bx-shield-alt-2', 'permissions.*'],
         ['user-permissions.index', 'permissions.assign', 'Attribution des permissions', 'bx bx-user-check', 'user-permissions.*'],
+        ['audit.index', 'audit.view', 'Audit', 'bx bx-list-check', 'audit.*'],
+        ['system.index', 'system.view', 'Système', 'bx bx-server', 'system.*'],
     ];
 @endphp
 <div class="card">

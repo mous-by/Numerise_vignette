@@ -4,18 +4,24 @@
 
 @section('content')
     <div class="page-breadcrumb d-flex flex-wrap gap-2 align-items-center mb-3">
-        <div class="breadcrumb-title pe-3">Audit</div>
+        <div class="breadcrumb-title pe-3">Paramètres</div>
         <div class="ps-3">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0 p-0">
                     <li class="breadcrumb-item"><a href="{{ route('home') }}"><i class="bx bx-home-alt"></i></a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Journal d'audit</li>
+                    <li class="breadcrumb-item active" aria-current="page">Audit</li>
                 </ol>
             </nav>
         </div>
     </div>
     <hr />
 
+    <div class="row">
+        <div class="col-12 col-lg-3">
+            @include('configuration._menu')
+        </div>
+
+        <div class="col-12 col-lg-9">
     <div class="card">
         <div class="card-header card-header-brand">
             <h6 class="mb-0 text-white"><i class='bx bx-filter-alt me-2'></i>FILTRES</h6>
@@ -68,7 +74,7 @@
                         <label class="form-check-label" for="superadmin">Actions du superadmin seulement</label>
                     </div>
                 </div>
-                <div class="col-12 col-md-6 col-xl-3 d-flex gap-2">
+                <div class="col-12 d-flex flex-wrap gap-2 justify-content-end">
                     <button type="submit" class="btn btn-primary d-flex align-items-center gap-1"><i class='bx bx-search'></i>Filtrer</button>
                     <a href="{{ route('audit.index') }}" class="btn btn-light">Réinitialiser</a>
                 </div>
@@ -88,25 +94,28 @@
                 <div class="table-responsive">
                     <table class="table" id="audit-table">
                         <thead>
-                            <tr><th>DATE</th><th>AUTEUR</th><th>MODULE</th><th>ACTION</th><th>DESCRIPTION</th><th>CANAL</th><th width="10%">DÉTAIL</th></tr>
+                            <tr><th>DATE</th><th>AUTEUR</th><th>ACTION</th><th>DESCRIPTION</th><th width="10%">DÉTAIL</th></tr>
                         </thead>
                         <tbody>
                             @foreach ($logs as $log)
                                 @php($detail = $details[$log->id])
                                 <tr>
-                                    <td class="text-nowrap">{{ $detail['date'] }}</td>
+                                    <td class="text-nowrap">
+                                        {{ $detail['date'] }}
+                                        <div class="text-muted small">{{ $detail['channel'] }}</div>
+                                    </td>
                                     <td>
                                         {{ $detail['author'] }}
-                                        @if ($detail['superadmin'])
-                                            <span class="badge bg-danger ms-1">Superadmin</span>
-                                        @elseif ($detail['role'])
-                                            <span class="text-muted small">({{ $detail['role'] }})</span>
-                                        @endif
+                                        <div>
+                                            @if ($detail['superadmin'])
+                                                <span class="badge bg-danger">Superadmin</span>
+                                            @elseif ($detail['role'])
+                                                <span class="text-muted small">{{ $detail['role'] }}</span>
+                                            @endif
+                                        </div>
                                     </td>
-                                    <td>{{ $log->module }}</td>
-                                    <td><code>{{ $log->action }}</code></td>
+                                    <td class="text-break"><code class="text-break">{{ $log->action }}</code></td>
                                     <td class="cell-wrap text-break">{{ $log->description }}</td>
-                                    <td>{{ $detail['channel'] }}</td>
                                     <td>
                                         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#auditDetailModal" data-log="{{ json_encode($detail, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}" title="Détail">
                                             <i class='bx bx-show'></i>
@@ -119,6 +128,8 @@
                 </div>
                 <div class="d-flex justify-content-center mt-3">{{ $logs->links('pagination::bootstrap-5') }}</div>
             @endif
+        </div>
+    </div>
         </div>
     </div>
 

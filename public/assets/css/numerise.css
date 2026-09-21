@@ -426,5 +426,5 @@ html.semi-bleu .sidebar-wrapper .metismenu .menu-label {
    ligne et pousse les dernières colonnes (boutons d'action) hors de la carte. Une cellule de texte libre reçoit cette classe. */
 .table .cell-wrap {
     white-space: normal;
-    min-width: 220px;
+    min-width: 160px;
 }
