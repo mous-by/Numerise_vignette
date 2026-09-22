@@ -206,4 +206,17 @@ class InformationScreenTest extends TestCase
         $this->actingAs($this->superadmin)->delete("/informations/{$information->id}")->assertRedirect('/informations');
         $this->assertSoftDeleted($information);
     }
+
+    public function test_the_superadmin_cannot_publish_since_it_has_no_commissariat(): void
+    {
+        // Gate::before (D16) laisse le superadmin franchir la permission informations.create, mais il n'a
+        // aucun commissariat par construction (§4.2) : une information sans commissariat n'a pas de sens
+        // (cahier §8) — message clair plutôt qu'une violation de contrainte en base.
+        $this->actingAs($this->superadmin)->from('/informations')
+            ->post('/informations', ['description' => 'Publication interdite'])
+            ->assertRedirect('/informations')
+            ->assertSessionHas('error');
+
+        $this->assertSame(0, Information::acrossCommissariats()->count());
+    }
 }

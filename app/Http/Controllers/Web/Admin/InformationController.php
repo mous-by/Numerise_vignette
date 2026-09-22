@@ -39,6 +39,13 @@ class InformationController extends Controller
     {
         $actor = $request->user();
 
+        // Une information appartient toujours au commissariat de son auteur (cahier §8) : le superadmin, sans
+        // institution par construction (§4.2), contourne la permission (Gate::before, D16) mais pas cette
+        // contrainte structurelle — logique métier, pas juste une autorisation, donc pas de bypass possible ici.
+        if ($actor->commissariat_id === null) {
+            return redirect()->route('informations.index')->with('error', 'Seul un commissaire, rattaché à un commissariat, peut publier une information.');
+        }
+
         $information = Information::create([
             'commissaire_id' => $actor->id,
             'commissariat_id' => $actor->commissariat_id,
