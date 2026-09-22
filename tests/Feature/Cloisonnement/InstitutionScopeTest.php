@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Cloisonnement;
 
+use App\Exceptions\MissingInstitutionException;
 use App\Models\Commissariat;
 use App\Models\Concerns\BelongsToCommissariat;
 use App\Models\Concerns\BelongsToMairie;
@@ -112,6 +113,24 @@ class InstitutionScopeTest extends TestCase
         $row = ScopedByCommissariat::create(['name' => 'X', 'phone' => '+22370000777', 'password' => 'not-a-hash']);
 
         $this->assertSame($this->a->id, $row->commissariat_id);
+    }
+
+    public function test_creating_without_any_institution_throws_instead_of_violating_the_database(): void
+    {
+        // Un compte sans institution (superadmin, admin national) contourne la permission (Gate::before, D16)
+        // mais pas cette contrainte : logique métier, jamais atteinte en usage normal.
+        $this->actingAs($this->superadmin());
+
+        $this->expectException(MissingInstitutionException::class);
+        ScopedByCommissariat::create(['name' => 'X', 'phone' => '+22370000778', 'password' => 'not-a-hash']);
+    }
+
+    public function test_creating_without_any_institution_throws_for_mairie_scoped_models_too(): void
+    {
+        $this->actingAs($this->superadmin());
+
+        $this->expectException(MissingInstitutionException::class);
+        ScopedByMairie::create(['name' => 'Y', 'phone' => '+22370000779', 'password' => 'not-a-hash']);
     }
 
     public function test_user_visible_to_is_fail_closed(): void

@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\MissingInstitutionException;
 use App\Http\Middleware\EnsureChannelAllowed;
 use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\EnsureSuperadminsExist;
@@ -56,5 +57,15 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('api/*') || $request->expectsJson()) {
                 return response()->json(['message' => 'Vous n\'avez pas les permissions nécessaires.', 'code' => 'forbidden'], 403);
             }
+        });
+
+        // BelongsToCommissariat / BelongsToMairie (ARCHITECTURE §11) : jamais atteinte en usage normal, seulement
+        // si un compte sans institution contourne la permission (Gate::before, D16).
+        $exceptions->render(function (MissingInstitutionException $e, Request $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+
+            return redirect()->back()->with('error', $e->getMessage());
         });
     })->create();
