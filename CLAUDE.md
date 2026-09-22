@@ -76,6 +76,8 @@ Cas d'usage : (1) enregistrement initial et acquisition de la VGT au commissaria
 
 Prérequis : PHP ≥ 8.3, Composer 2, MariaDB 10.4+ (ou MySQL 8), Node ≥ 20 (mobile seulement).
 
+Dans `php.ini` : `upload_max_filesize` et `post_max_size` par défaut (souvent 2M / 8M) sont trop bas pour le module Informations (W6, images jusqu'à 4 Mo, PDF jusqu'à 8 Mo, plusieurs par publication). Mettre au moins `upload_max_filesize = 10M` et `post_max_size = 50M`, puis redémarrer `php artisan serve` (le fichier n'est relu qu'au démarrage du processus). Sans ça, un fichier trop gros échoue silencieusement avant même d'atteindre la validation Laravel.
+
 ```sh
 composer install
 cp .env.example .env
