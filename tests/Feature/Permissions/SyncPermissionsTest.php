@@ -55,7 +55,10 @@ class SyncPermissionsTest extends TestCase
         ], $admin);
 
         $commissaire = Role::findByName('commissaire', 'web')->permissions->pluck('name')->sort()->values()->all();
-        $this->assertSame(['users.activate', 'users.create', 'users.reset_password', 'users.revoke_access', 'users.update', 'users.view'], $commissaire);
+        $this->assertSame([
+            'proprietaires.create', 'proprietaires.delete', 'proprietaires.update', 'proprietaires.view',
+            'users.activate', 'users.create', 'users.reset_password', 'users.revoke_access', 'users.update', 'users.view',
+        ], $commissaire);
 
         foreach (['mairie', 'police', 'population', 'superadmin'] as $role) {
             $this->assertCount(0, Role::findByName($role, 'web')->permissions, "Le rôle $role n'a aucun défaut au socle.");
