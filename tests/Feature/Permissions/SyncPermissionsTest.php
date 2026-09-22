@@ -50,14 +50,21 @@ class SyncPermissionsTest extends TestCase
 
         $admin = Role::findByName('admin_national', 'web')->permissions->pluck('name')->sort()->values()->all();
         $this->assertSame([
-            'commissariats.create', 'commissariats.update', 'commissariats.view', 'mairies.create', 'mairies.update', 'mairies.view',
+            'commissariats.create', 'commissariats.update', 'commissariats.view', 'informations.view',
+            'mairies.create', 'mairies.update', 'mairies.view',
             'users.activate', 'users.create', 'users.reset_password', 'users.revoke_access', 'users.update', 'users.view',
         ], $admin);
 
         $commissaire = Role::findByName('commissaire', 'web')->permissions->pluck('name')->sort()->values()->all();
-        $this->assertSame(['users.activate', 'users.create', 'users.reset_password', 'users.revoke_access', 'users.update', 'users.view'], $commissaire);
+        $this->assertSame([
+            'informations.create', 'informations.delete', 'informations.update', 'informations.view',
+            'users.activate', 'users.create', 'users.reset_password', 'users.revoke_access', 'users.update', 'users.view',
+        ], $commissaire);
 
-        foreach (['mairie', 'police', 'population', 'superadmin'] as $role) {
+        $mairie = Role::findByName('mairie', 'web')->permissions->pluck('name')->sort()->values()->all();
+        $this->assertSame(['informations.view'], $mairie);
+
+        foreach (['police', 'population', 'superadmin'] as $role) {
             $this->assertCount(0, Role::findByName($role, 'web')->permissions, "Le rôle $role n'a aucun défaut au socle.");
         }
     }

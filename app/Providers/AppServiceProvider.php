@@ -56,6 +56,10 @@ class AppServiceProvider extends ServiceProvider
         // Limitation de l'API : 120 requêtes par minute et par utilisateur (ou par IP pour les appels publics).
         RateLimiter::for('api', fn (Request $request) => Limit::perMinute(120)->by($request->user()?->getKey() ?: $request->ip()));
 
+        // Routes publiques de la population (D32, §4.9) : sans jeton, donc limitées par IP seulement. Introduit avec
+        // W6 (informations) ; réutilisé par les futures routes publiques (motos retrouvées, demande VGT).
+        RateLimiter::for('public', fn (Request $request) => Limit::perMinute(30)->by($request->ip()));
+
         // Alias morph stables : ils s'écrivent dans activity_logs, model_has_roles et personal_access_tokens.
         Relation::morphMap([
             'user' => User::class,

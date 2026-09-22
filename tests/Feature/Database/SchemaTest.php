@@ -9,8 +9,10 @@ use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
- * Le schéma du socle correspond exactement au dictionnaire de données de CLAUDE.md (§4.1).
- * Ces tests tournent sur MariaDB (db_numerise_vignette_test) : le CHECK et les clés y sont réellement appliqués.
+ * Le schéma correspond exactement au dictionnaire de données de CLAUDE.md (§4.1, socle) et aux tables des modules
+ * livrés (ex. `informations`, W6) : toute table inattendue fait échouer ce test, qui sert de garde-fou contre une
+ * dérive de schéma. Ces tests tournent sur MariaDB (db_numerise_vignette_test) : le CHECK et les clés y sont
+ * réellement appliqués.
  */
 class SchemaTest extends TestCase
 {
@@ -21,9 +23,9 @@ class SchemaTest extends TestCase
         $tables = collect(Schema::getTables(schema: DB::getDatabaseName()))->pluck('name')->reject(fn ($name) => $name === 'migrations')->sort()->values()->all();
 
         $expected = [
-            'activity_logs', 'cache', 'cache_locks', 'commissariats', 'failed_jobs', 'job_batches', 'jobs', 'mairies',
-            'model_has_permissions', 'model_has_roles', 'permissions', 'personal_access_tokens', 'role_has_permissions',
-            'roles', 'sessions', 'users',
+            'activity_logs', 'cache', 'cache_locks', 'commissariats', 'failed_jobs', 'informations', 'job_batches', 'jobs',
+            'mairies', 'model_has_permissions', 'model_has_roles', 'permissions', 'personal_access_tokens',
+            'role_has_permissions', 'roles', 'sessions', 'users',
         ];
 
         $this->assertSame($expected, $tables);

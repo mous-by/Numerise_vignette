@@ -82,6 +82,7 @@ cp .env.example .env
 php artisan key:generate
 # créer deux bases vides (utf8mb4, utf8mb4_unicode_ci) : db_numerise_vignette et db_numerise_vignette_test
 php artisan migrate --seed      # rôles, permissions, superadmins déclarés dans .env
+php artisan storage:link        # fichiers publics des modules (images/PDF des informations, W6)
 php artisan serve               # crée aussi les superadmins manquants au lancement
 composer test                   # tests (base db_numerise_vignette_test, jamais la base de développement)
 ```
@@ -342,13 +343,13 @@ Tant que le mot de passe est **temporaire**, `password_change_required` vaut `tr
 | 422 `{"message","errors":{"phone":[…]}}` | Validation, ou identifiants refusés (un numéro inconnu et un mauvais mot de passe reçoivent le même message) |
 | 429 | Trop de tentatives, ou limitation |
 
-### Contrat des informations — BROUILLON (W6, consommé par M2 et M5)
+### Contrat des informations (W6, consommé par M2 et M5)
 
-Rédigé côté mobile d'après le cahier (§6 « Informations » et « Affichage »), **à valider par Amadou** : tant que W6 n'est pas fusionnée, aucun endpoint n'existe. L'application est déjà écrite contre ce contrat (mode maquette, §9).
+Statut : implémenté côté Web et API (branche `feature/w6-informations`, à valider par Moustapha en revue). Écran Web : le commissaire publie (description, image ou PDF — au moins un des trois), tous les rôles Web autorisés consultent (liste non cloisonnée par commissariat, publique par nature). Rédigé côté mobile d'après le cahier (§6 « Informations » et « Affichage ») ; l'application mobile est écrite contre ce contrat (mode maquette, §9) et passera à l'API réelle une fois la branche fusionnée.
 
 | Méthode | Route | Auth | Rôle |
 |---|---|---|---|
-| GET | `/informations?page=1` | **publique** (aucun jeton, D32) | Liste paginée, la plus récente d'abord ; lecture seule ; consommée par la police (M2) et la population (M5) |
+| GET | `/informations?page=1` | **publique** (aucun jeton, D32), `throttle:public` (30/min/IP) | Liste paginée, la plus récente d'abord ; lecture seule ; consommée par la police (M2) et la population (M5) |
 
 ```json
 { "data": [ { "id": 4, "commissaire_name": "…", "commissariat_name": "…", "description": "…",
@@ -357,9 +358,10 @@ Rédigé côté mobile d'après le cahier (§6 « Informations » et « Affichag
   "meta": { "current_page": 1, "last_page": 2 } }
 ```
 
-- Champs du cahier : nom du commissaire, nom du commissariat, description, fichier PDF, image ; le cahier n'a **pas de titre**. `description`, `image_url` et `document_url` sont chacun optionnels (`null`) : « description **ou** fichier PDF **ou** image ». URL absolues, joignables depuis le téléphone.
-- `published_at` (tri, date affichée) et la pagination sont des PROPOSITIONS TECHNIQUES — À VALIDER.
-- Endpoint **public** : pas de jeton ni de permission, limitation par IP (429 au-delà), aucune donnée personnelle ; il renvoie les informations de **tous** les commissariats (le cahier dit « informations venant des différents commissariats »). Tant qu'il n'existe pas, l'application affiche « Les informations ne sont pas encore disponibles sur le serveur ».
+- Champs du cahier : nom du commissaire, nom du commissariat, description, fichier PDF, image ; le cahier n'a **pas de titre**. `description`, `image_url` et `document_url` sont chacun optionnels (`null`) : « description **ou** fichier PDF **ou** image » (au moins un des trois, imposé à la création comme à la modification). URL absolues (`Storage::disk('public')->url()`), joignables depuis le téléphone — nécessite `php artisan storage:link` (§3).
+- `published_at` (tri, date affichée ; réglé automatiquement à la publication) et la pagination restent des PROPOSITIONS TECHNIQUES.
+- Endpoint **public** : pas de jeton ni de permission, limitation par IP (limiteur nommé `public`, introduit avec W6 dans `AppServiceProvider`, réutilisable par les futures routes publiques — motos retrouvées, demande VGT), aucune donnée personnelle ; il renvoie les informations de **tous** les commissariats (le cahier dit « informations venant des différents commissariats »). Route en liste blanche du test d'architecture (`api.informations.index`).
+- Écran Web (`/informations`) : permissions `informations.view/create/update/delete` — défauts commissaire (tout), mairie et admin national (lecture seule, supervision). Modifier/supprimer réservé à l'auteur de son propre commissariat (propriété d'auteur, pas un plafond de rôle) ; la liste elle-même contourne volontairement le cloisonnement (`Information::acrossCommissariats()`) puisque ces données sont déjà publiques via l'API.
 
 ## 9. Application mobile (`mobile/`)
 
