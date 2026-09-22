@@ -19,7 +19,7 @@ return [
         ],
     ],
 
-    'navigation' => [
-        ['label' => 'Mairies', 'icon' => 'bx bx-building-house', 'route' => 'mairies.index', 'permission' => 'mairies.view', 'active' => 'mairies.*', 'order' => 20],
-    ],
+    // Pas d'entrée de sidebar : l'écran s'ouvre depuis le sous-menu Paramètres (configuration/_menu.blade.php),
+    // qui la propose déjà, comme Utilisateurs, Commissariats, Audit et Système.
+    'navigation' => [],
 ];
