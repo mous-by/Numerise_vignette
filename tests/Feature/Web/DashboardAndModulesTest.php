@@ -220,16 +220,16 @@ class DashboardAndModulesTest extends TestCase
     public function test_the_settings_entry_target_is_not_hardcoded_to_roles(): void
     {
         // ModuleRegistry::firstAccessibleSettingsItem() : fail-closed sans aucun accès, et le premier écran
-        // réellement accessible sinon — jamais figé sur /roles (réservée au superadmin). Sur ce dépôt (sans
-        // W1/W2/W5), seuls roles/permissions/audit/system existent : le comportement complet (Utilisateurs
-        // préféré pour un admin national) se vérifie une fois ces branches réunies.
+        // réellement accessible sinon — jamais figé sur /roles (réservée au superadmin). Selon les branches
+        // fusionnées (W1/W2/W5 ajoutent Utilisateurs/Commissariats/Mairies avant Rôles dans la liste), le
+        // superadmin atterrit sur le tout premier écran qui EXISTE : peu importe lequel, jamais null pour lui.
         $registry = app(ModuleRegistry::class);
 
         $this->assertNull($registry->firstAccessibleSettingsItem(User::factory()->mairie()->create()));
 
         $item = $registry->firstAccessibleSettingsItem($this->superadmin());
         $this->assertNotNull($item);
-        $this->assertSame('roles.index', $item['route']);
+        $this->assertContains($item['route'], collect($registry->settingsItems())->pluck('route')->all());
     }
 
     public function test_the_profile_shows_role_and_institution(): void
