@@ -107,13 +107,14 @@ class DashboardAndModulesTest extends TestCase
             $page->assertSee($label);
         }
 
-        // Admin national : pareil, sauf Propriétaires — réservé au commissaire par défaut (données personnelles
-        // des citoyens, pas une supervision nationale par défaut comme les institutions ou les informations, W7).
+        // Admin national : pareil, sauf Propriétaires et Motos — réservés au commissaire par défaut (données
+        // personnelles des citoyens, pas une supervision nationale par défaut comme les institutions, W7 et W8).
         $adminPage = $this->actingAs(User::factory()->adminNational()->create())->get('/')->assertOk()->assertSee('Modules à venir');
-        foreach ($expected->reject(fn ($label) => $label === 'Propriétaires') as $label) {
+        foreach ($expected->reject(fn ($label) => in_array($label, ['Propriétaires', 'Motos'], true)) as $label) {
             $adminPage->assertSee($label);
         }
         $adminPage->assertDontSee('Propriétaires');
+        // Pas de assertDontSee('Motos') : « Motos retrouvées » (encore à venir, visible à l'admin national) le contiendrait.
     }
 
     public function test_each_web_role_sees_the_modules_the_cahier_gives_it(): void
@@ -138,18 +139,18 @@ class DashboardAndModulesTest extends TestCase
     {
         $agent = User::factory()->mairie()->create();
 
-        $this->get('/modules/motos')->assertRedirect('/login'); // invité, avant toute authentification
-        $this->actingAs($agent)->get('/modules/motos')->assertNotFound();
+        $this->get('/modules/declarations')->assertRedirect('/login'); // invité, avant toute authentification
+        $this->actingAs($agent)->get('/modules/declarations')->assertNotFound();
         $this->actingAs($agent)->get('/modules/n-existe-pas')->assertNotFound();
     }
 
     public function test_a_module_leaves_the_planned_list_when_its_manifest_exists(): void
     {
         $superadmin = $this->superadmin();
-        config(['modules.motos' => ['label' => 'Motos', 'permissions' => ['view' => 'Voir'], 'roles' => []]]);
+        config(['modules.declarations' => ['label' => 'Déclarations', 'permissions' => ['view' => 'Voir'], 'roles' => []]]);
 
-        $this->actingAs($superadmin)->get('/modules/motos')->assertNotFound();
-        $this->actingAs($superadmin)->get('/modules/declarations')->assertOk();
+        $this->actingAs($superadmin)->get('/modules/declarations')->assertNotFound();
+        $this->actingAs($superadmin)->get('/modules/motos-retrouvees')->assertOk();
     }
 
     /** Le HTML de la sidebar seule (le corps de la page peut contenir les mêmes mots). */

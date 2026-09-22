@@ -22,7 +22,7 @@ class SchemaTest extends TestCase
 
         $expected = [
             'activity_logs', 'cache', 'cache_locks', 'commissariats', 'failed_jobs', 'job_batches', 'jobs', 'mairies',
-            'model_has_permissions', 'model_has_roles', 'permissions', 'personal_access_tokens', 'proprietaires',
+            'model_has_permissions', 'model_has_roles', 'motos', 'permissions', 'personal_access_tokens', 'proprietaires',
             'role_has_permissions', 'roles', 'sessions', 'users',
         ];
 
