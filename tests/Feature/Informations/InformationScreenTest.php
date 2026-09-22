@@ -13,8 +13,9 @@ use Tests\Concerns\BuildsFoundation;
 use Tests\TestCase;
 
 /**
- * Écran Informations (W6) : publiées par les commissaires (description, image ou PDF), lues par tous les rôles
- * Web autorisés — liste publique par nature, pas cloisonnée par commissariat (ARCHITECTURE §11).
+ * Écran Informations (W6) : publiées par les commissaires (description, images ou PDF — plusieurs de chaque,
+ * PROPOSITION TECHNIQUE), lues par tous les rôles Web autorisés — liste publique par nature, pas cloisonnée par
+ * commissariat (ARCHITECTURE §11).
  */
 class InformationScreenTest extends TestCase
 {
@@ -73,27 +74,41 @@ class InformationScreenTest extends TestCase
         $this->assertSame(1, ActivityLog::where('action', 'informations.created')->count());
     }
 
-    public function test_a_commissaire_publishes_an_image_and_a_pdf_without_description(): void
+    public function test_a_commissaire_publishes_several_images_and_pdfs_without_description(): void
     {
         $chef = User::factory()->commissaire()->create();
 
         $this->actingAs($chef)->post('/informations', [
-            'image' => UploadedFile::fake()->image('avis.jpg'),
-            'document' => UploadedFile::fake()->create('avis.pdf', 200, 'application/pdf'),
+            'images' => [UploadedFile::fake()->image('a.jpg'), UploadedFile::fake()->image('b.jpg')],
+            'documents' => [UploadedFile::fake()->create('c.pdf', 200, 'application/pdf')],
         ])->assertRedirect('/informations');
 
-        $information = Information::acrossCommissariats()->sole();
-        Storage::disk('public')->assertExists($information->image_path);
-        Storage::disk('public')->assertExists($information->document_path);
+        $information = Information::acrossCommissariats()->with('files')->sole();
+        $this->assertCount(2, $information->images);
+        $this->assertCount(1, $information->documents);
+        foreach ($information->files as $file) {
+            Storage::disk('public')->assertExists($file->path);
+        }
     }
 
-    public function test_at_least_one_of_description_image_or_document_is_required(): void
+    public function test_at_least_one_of_description_images_or_documents_is_required(): void
     {
         $chef = User::factory()->commissaire()->create();
 
         $this->actingAs($chef)->from('/informations')->post('/informations', [])
             ->assertRedirect('/informations')
             ->assertSessionHasErrors('description');
+
+        $this->assertSame(0, Information::acrossCommissariats()->count());
+    }
+
+    public function test_more_than_five_images_is_refused(): void
+    {
+        $chef = User::factory()->commissaire()->create();
+        $images = array_map(fn ($i) => UploadedFile::fake()->image("img{$i}.jpg"), range(1, 6));
+
+        $this->actingAs($chef)->from('/informations')->post('/informations', ['images' => $images])
+            ->assertSessionHasErrors('images');
 
         $this->assertSame(0, Information::acrossCommissariats()->count());
     }
@@ -119,49 +134,67 @@ class InformationScreenTest extends TestCase
         $this->actingAs($chef)->delete("/informations/{$information->id}")->assertNotFound();
     }
 
-    public function test_the_author_institution_updates_replaces_the_image_and_deletes_the_old_one(): void
+    public function test_updating_adds_new_files_alongside_existing_ones(): void
     {
         $chef = User::factory()->commissaire()->create();
-        $first = UploadedFile::fake()->image('premiere.jpg');
-        $this->actingAs($chef)->post('/informations', ['image' => $first]);
+        $this->actingAs($chef)->post('/informations', ['images' => [UploadedFile::fake()->image('premiere.jpg')]]);
         $information = Information::acrossCommissariats()->sole();
-        $oldPath = $information->image_path;
 
         $this->actingAs($chef)->put("/informations/{$information->id}", [
-            'description' => 'Mise à jour', 'image' => UploadedFile::fake()->image('nouvelle.jpg'),
+            'description' => 'Mise à jour', 'images' => [UploadedFile::fake()->image('deuxieme.jpg')],
         ])->assertRedirect('/informations');
 
-        $information->refresh();
-        Storage::disk('public')->assertMissing($oldPath);
-        Storage::disk('public')->assertExists($information->image_path);
-        $this->assertNotSame($oldPath, $information->image_path);
+        $this->assertCount(2, $information->fresh()->images);
     }
 
-    public function test_removing_the_image_without_replacing_it_keeps_the_description_valid(): void
+    public function test_removing_a_specific_existing_file_keeps_the_others(): void
     {
         $chef = User::factory()->commissaire()->create();
-        $this->actingAs($chef)->post('/informations', ['image' => UploadedFile::fake()->image('seule.jpg')]);
-        $information = Information::acrossCommissariats()->sole();
-        $path = $information->image_path;
+        $this->actingAs($chef)->post('/informations', [
+            'images' => [UploadedFile::fake()->image('a.jpg'), UploadedFile::fake()->image('b.jpg')],
+        ]);
+        $information = Information::acrossCommissariats()->with('images')->sole();
+        $toRemove = $information->images->first();
+        $kept = $information->images->last();
 
         $this->actingAs($chef)->put("/informations/{$information->id}", [
-            'description' => 'Texte de secours', 'remove_image' => '1',
+            'description' => 'Texte de secours', 'remove_files' => [$toRemove->id],
         ])->assertRedirect('/informations');
 
-        Storage::disk('public')->assertMissing($path);
-        $this->assertNull($information->fresh()->image_path);
+        Storage::disk('public')->assertMissing($toRemove->path);
+        $this->assertCount(1, $information->fresh()->images);
+        $this->assertSame($kept->id, $information->fresh()->images->first()->id);
     }
 
-    public function test_deleting_removes_the_files_and_soft_deletes_the_row(): void
+    public function test_removing_every_file_without_a_description_is_refused(): void
     {
         $chef = User::factory()->commissaire()->create();
-        $this->actingAs($chef)->post('/informations', ['image' => UploadedFile::fake()->image('a.jpg')]);
-        $information = Information::acrossCommissariats()->sole();
-        $path = $information->image_path;
+        $this->actingAs($chef)->post('/informations', ['images' => [UploadedFile::fake()->image('seule.jpg')]]);
+        $information = Information::acrossCommissariats()->with('images')->sole();
+        $image = $information->images->first();
+
+        $this->actingAs($chef)->from('/informations')->put("/informations/{$information->id}", [
+            'remove_files' => [$image->id],
+        ])->assertSessionHasErrors('description');
+
+        $this->assertCount(1, $information->fresh()->images, 'Rien ne doit être supprimé si la validation échoue.');
+    }
+
+    public function test_deleting_removes_every_file_and_soft_deletes_the_row(): void
+    {
+        $chef = User::factory()->commissaire()->create();
+        $this->actingAs($chef)->post('/informations', [
+            'images' => [UploadedFile::fake()->image('a.jpg')],
+            'documents' => [UploadedFile::fake()->create('b.pdf', 100, 'application/pdf')],
+        ]);
+        $information = Information::acrossCommissariats()->with('files')->sole();
+        $paths = $information->files->pluck('path')->all();
 
         $this->actingAs($chef)->delete("/informations/{$information->id}")->assertRedirect('/informations');
 
-        Storage::disk('public')->assertMissing($path);
+        foreach ($paths as $path) {
+            Storage::disk('public')->assertMissing($path);
+        }
         $this->assertSoftDeleted($information);
         $this->assertSame(1, ActivityLog::where('action', 'informations.deleted')->count());
     }

@@ -2,6 +2,44 @@
 
 @section('title', 'Informations')
 
+@push('styles')
+    <style>
+        /* Zone de glisser-déposer (aucun équivalent dans le thème) : composant propre au module, pas de CSS ad hoc
+           sur les éléments du thème. */
+        .dz { border: none; }
+        .dz-surface {
+            border: 2px dashed #c7d2e0;
+            border-radius: .5rem;
+            padding: 1.25rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color .15s ease, background-color .15s ease;
+            color: #6b7d99;
+        }
+        .dz-surface:hover, .dz.dz-active .dz-surface {
+            border-color: #1d4e89;
+            background-color: rgba(29, 78, 137, .05);
+            color: #1d4e89;
+        }
+        .dz-surface i { font-size: 1.75rem; display: block; margin-bottom: .25rem; }
+        .dz-surface p { margin: 0; font-size: .875rem; }
+        .dz-preview { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
+        .dz-chip { position: relative; width: 72px; }
+        .dz-chip img { width: 72px; height: 72px; object-fit: cover; border-radius: .375rem; border: 1px solid #e2e8f0; }
+        .dz-chip .dz-doc { width: 72px; height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: .375rem; background: #f8fafc; padding: .25rem; }
+        .dz-chip .dz-doc i { font-size: 1.5rem; color: #dc2626; }
+        .dz-chip .dz-doc span { font-size: .625rem; text-align: center; word-break: break-all; line-height: 1.1; margin-top: .125rem; }
+        .dz-chip .dz-remove {
+            position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%;
+            border: none; background: #dc2626; color: #fff; line-height: 1; font-size: .875rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; padding: 0;
+        }
+        .dz-chip.dz-marked-removed { opacity: .35; }
+        .dz-chip.dz-marked-removed .dz-remove { background: #64748b; }
+        .gallery-thumb { width: 28px; height: 28px; object-fit: cover; border-radius: .25rem; border: 1px solid #e2e8f0; }
+    </style>
+@endpush
+
 @section('content')
     <div class="page-breadcrumb d-flex flex-wrap gap-2 align-items-center mb-3">
         <div class="breadcrumb-title pe-3">Informations</div>
@@ -46,15 +84,22 @@
                                 <td>{{ $information->commissariat->name }}</td>
                                 <td class="cell-wrap text-break">{{ $information->description ?? '—' }}</td>
                                 <td class="text-nowrap">
-                                    @if ($information->image_path)
-                                        <a href="{{ $information->imageUrl() }}" target="_blank" rel="noopener" title="Image"><i class='bx bx-image'></i></a>
-                                    @endif
-                                    @if ($information->document_path)
-                                        <a href="{{ $information->documentUrl() }}" target="_blank" rel="noopener" title="PDF"><i class='bx bxs-file-pdf'></i></a>
-                                    @endif
-                                    @if (! $information->image_path && ! $information->document_path)
-                                        —
-                                    @endif
+                                    <div class="d-flex align-items-center gap-1">
+                                        @foreach ($information->images->take(3) as $image)
+                                            <a href="{{ $image->url() }}" target="_blank" rel="noopener"><img src="{{ $image->url() }}" class="gallery-thumb" alt="Image"></a>
+                                        @endforeach
+                                        @if ($information->images->count() > 3)
+                                            <span class="badge bg-light text-dark border">+{{ $information->images->count() - 3 }}</span>
+                                        @endif
+                                        @if ($information->documents->isNotEmpty())
+                                            <span class="badge bg-light text-dark border d-inline-flex align-items-center gap-1">
+                                                <i class='bx bxs-file-pdf text-danger'></i>{{ $information->documents->count() }}
+                                            </span>
+                                        @endif
+                                        @if ($information->images->isEmpty() && $information->documents->isEmpty())
+                                            —
+                                        @endif
+                                    </div>
                                 </td>
                                 <td class="d-flex gap-1">
                                     @can('update', $information)
@@ -82,7 +127,7 @@
 
     @can('create', \App\Models\Information::class)
         <div class="modal fade" id="createInformationModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
                     <form method="POST" action="{{ route('informations.store') }}" enctype="multipart/form-data">
                         @csrf
@@ -96,17 +141,36 @@
                                 <label for="description" class="form-label fw-semibold">Description</label>
                                 <textarea class="form-control @if ($createFailed && $errors->has('description')) is-invalid @endif" id="description" name="description" rows="3">{{ $createFailed ? old('description') : '' }}</textarea>
                                 @if ($createFailed && $errors->has('description'))<div class="invalid-feedback">{{ $errors->first('description') }}</div>@endif
-                                <small class="text-muted">Description, image ou PDF : au moins un des trois.</small>
+                                <small class="text-muted">Description, images ou PDF : au moins un des trois.</small>
                             </div>
-                            <div class="mb-3">
-                                <label for="image" class="form-label fw-semibold">Image</label>
-                                <input type="file" class="form-control @if ($createFailed && $errors->has('image')) is-invalid @endif" id="image" name="image" accept="image/png,image/jpeg,image/webp">
-                                @if ($createFailed && $errors->has('image'))<div class="invalid-feedback">{{ $errors->first('image') }}</div>@endif
-                            </div>
-                            <div class="mb-3">
-                                <label for="document" class="form-label fw-semibold">Fichier PDF</label>
-                                <input type="file" class="form-control @if ($createFailed && $errors->has('document')) is-invalid @endif" id="document" name="document" accept="application/pdf">
-                                @if ($createFailed && $errors->has('document'))<div class="invalid-feedback">{{ $errors->first('document') }}</div>@endif
+
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-semibold">Images <span class="text-muted fw-normal">(5 maximum)</span></label>
+                                    <div class="dz js-dropzone" data-input="images-input-create" data-preview="images-preview-create" data-max="{{ \App\Models\Information::MAX_IMAGES }}" data-kind="image">
+                                        <div class="dz-surface">
+                                            <i class='bx bx-cloud-upload'></i>
+                                            <p>Glissez des images ici, ou cliquez pour parcourir</p>
+                                            <span class="dz-count text-muted small">0 / {{ \App\Models\Information::MAX_IMAGES }}</span>
+                                        </div>
+                                        <div class="dz-preview" id="images-preview-create"></div>
+                                        <input type="file" id="images-input-create" name="images[]" accept="image/png,image/jpeg,image/webp" multiple hidden>
+                                    </div>
+                                    @if ($createFailed && ($errors->has('images') || $errors->has('images.*')))<div class="text-danger small mt-1">{{ $errors->first('images') ?: $errors->first('images.*') }}</div>@endif
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-semibold">Fichiers PDF <span class="text-muted fw-normal">(3 maximum)</span></label>
+                                    <div class="dz js-dropzone" data-input="documents-input-create" data-preview="documents-preview-create" data-max="{{ \App\Models\Information::MAX_DOCUMENTS }}" data-kind="document">
+                                        <div class="dz-surface">
+                                            <i class='bx bx-cloud-upload'></i>
+                                            <p>Glissez des PDF ici, ou cliquez pour parcourir</p>
+                                            <span class="dz-count text-muted small">0 / {{ \App\Models\Information::MAX_DOCUMENTS }}</span>
+                                        </div>
+                                        <div class="dz-preview" id="documents-preview-create"></div>
+                                        <input type="file" id="documents-input-create" name="documents[]" accept="application/pdf" multiple hidden>
+                                    </div>
+                                    @if ($createFailed && ($errors->has('documents') || $errors->has('documents.*')))<div class="text-danger small mt-1">{{ $errors->first('documents') ?: $errors->first('documents.*') }}</div>@endif
+                                </div>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -129,9 +193,9 @@
         @can('update', $information)
             @php($editFailed = $errors->any() && old('information_id') == $information->id)
             <div class="modal fade" id="editInformation-{{ $information->id }}" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
-                        <form method="POST" action="{{ route('informations.update', $information) }}" enctype="multipart/form-data">
+                        <form method="POST" action="{{ route('informations.update', $information) }}" enctype="multipart/form-data" class="js-edit-information-form">
                             @csrf
                             @method('PUT')
                             <input type="hidden" name="information_id" value="{{ $information->id }}">
@@ -145,33 +209,57 @@
                                     <textarea class="form-control @if ($editFailed && $errors->has('description')) is-invalid @endif" id="description-{{ $information->id }}" name="description" rows="3">{{ $editFailed ? old('description') : $information->description }}</textarea>
                                     @if ($editFailed && $errors->has('description'))<div class="invalid-feedback">{{ $errors->first('description') }}</div>@endif
                                 </div>
-                                <div class="mb-3">
-                                    <label for="image-{{ $information->id }}" class="form-label fw-semibold">Image</label>
-                                    @if ($information->image_path)
-                                        <div class="mb-2 d-flex align-items-center gap-2">
-                                            <a href="{{ $information->imageUrl() }}" target="_blank" rel="noopener">Image actuelle</a>
-                                            <div class="form-check mb-0">
-                                                <input class="form-check-input" type="checkbox" value="1" name="remove_image" id="remove-image-{{ $information->id }}">
-                                                <label class="form-check-label" for="remove-image-{{ $information->id }}">Supprimer</label>
+
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-semibold">Images <span class="text-muted fw-normal">(5 maximum au total)</span></label>
+                                        @if ($information->images->isNotEmpty())
+                                            <div class="dz-preview mb-2">
+                                                @foreach ($information->images as $image)
+                                                    <div class="dz-chip js-existing-file" data-id="{{ $image->id }}">
+                                                        <img src="{{ $image->url() }}" alt="Image">
+                                                        <button type="button" class="dz-remove js-toggle-remove" title="Retirer">&times;</button>
+                                                    </div>
+                                                @endforeach
                                             </div>
-                                        </div>
-                                    @endif
-                                    <input type="file" class="form-control @if ($editFailed && $errors->has('image')) is-invalid @endif" id="image-{{ $information->id }}" name="image" accept="image/png,image/jpeg,image/webp">
-                                    @if ($editFailed && $errors->has('image'))<div class="invalid-feedback">{{ $errors->first('image') }}</div>@endif
-                                </div>
-                                <div class="mb-3">
-                                    <label for="document-{{ $information->id }}" class="form-label fw-semibold">Fichier PDF</label>
-                                    @if ($information->document_path)
-                                        <div class="mb-2 d-flex align-items-center gap-2">
-                                            <a href="{{ $information->documentUrl() }}" target="_blank" rel="noopener">PDF actuel</a>
-                                            <div class="form-check mb-0">
-                                                <input class="form-check-input" type="checkbox" value="1" name="remove_document" id="remove-document-{{ $information->id }}">
-                                                <label class="form-check-label" for="remove-document-{{ $information->id }}">Supprimer</label>
+                                        @endif
+                                        <div class="dz js-dropzone" data-input="images-input-{{ $information->id }}" data-preview="images-preview-{{ $information->id }}" data-max="{{ \App\Models\Information::MAX_IMAGES }}" data-kind="image">
+                                            <div class="dz-surface">
+                                                <i class='bx bx-cloud-upload'></i>
+                                                <p>Ajouter des images</p>
+                                                <span class="dz-count text-muted small">0 / {{ \App\Models\Information::MAX_IMAGES }}</span>
                                             </div>
+                                            <div class="dz-preview" id="images-preview-{{ $information->id }}"></div>
+                                            <input type="file" id="images-input-{{ $information->id }}" name="images[]" accept="image/png,image/jpeg,image/webp" multiple hidden>
                                         </div>
-                                    @endif
-                                    <input type="file" class="form-control @if ($editFailed && $errors->has('document')) is-invalid @endif" id="document-{{ $information->id }}" name="document" accept="application/pdf">
-                                    @if ($editFailed && $errors->has('document'))<div class="invalid-feedback">{{ $errors->first('document') }}</div>@endif
+                                        @if ($editFailed && ($errors->has('images') || $errors->has('images.*')))<div class="text-danger small mt-1">{{ $errors->first('images') ?: $errors->first('images.*') }}</div>@endif
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-semibold">Fichiers PDF <span class="text-muted fw-normal">(3 maximum au total)</span></label>
+                                        @if ($information->documents->isNotEmpty())
+                                            <div class="dz-preview mb-2">
+                                                @foreach ($information->documents as $document)
+                                                    <div class="dz-chip js-existing-file" data-id="{{ $document->id }}">
+                                                        <div class="dz-doc">
+                                                            <i class='bx bxs-file-pdf'></i>
+                                                            <span>{{ \Illuminate\Support\Str::limit(basename($document->path), 14) }}</span>
+                                                        </div>
+                                                        <button type="button" class="dz-remove js-toggle-remove" title="Retirer">&times;</button>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                        <div class="dz js-dropzone" data-input="documents-input-{{ $information->id }}" data-preview="documents-preview-{{ $information->id }}" data-max="{{ \App\Models\Information::MAX_DOCUMENTS }}" data-kind="document">
+                                            <div class="dz-surface">
+                                                <i class='bx bx-cloud-upload'></i>
+                                                <p>Ajouter des PDF</p>
+                                                <span class="dz-count text-muted small">0 / {{ \App\Models\Information::MAX_DOCUMENTS }}</span>
+                                            </div>
+                                            <div class="dz-preview" id="documents-preview-{{ $information->id }}"></div>
+                                            <input type="file" id="documents-input-{{ $information->id }}" name="documents[]" accept="application/pdf" multiple hidden>
+                                        </div>
+                                        @if ($editFailed && ($errors->has('documents') || $errors->has('documents.*')))<div class="text-danger small mt-1">{{ $errors->first('documents') ?: $errors->first('documents.*') }}</div>@endif
+                                    </div>
                                 </div>
                             </div>
                             <div class="modal-footer">
@@ -207,6 +295,102 @@
                 confirmButtonText: 'Supprimer',
                 cancelButtonText: 'Annuler',
             }).then((result) => { if (result.isConfirmed) form.submit(); });
+        });
+
+        // Zones de glisser-déposer : gèrent un input file[multiple] caché, avec aperçus et retrait individuel
+        // avant envoi. Aucune dépendance externe (D15) : API HTML5 native (DataTransfer, drag events).
+        function initDropzone(root) {
+            const input = document.getElementById(root.dataset.input);
+            const preview = document.getElementById(root.dataset.preview);
+            const surface = root.querySelector('.dz-surface');
+            const countEl = root.querySelector('.dz-count');
+            const max = parseInt(root.dataset.max, 10) || 99;
+            const kind = root.dataset.kind;
+            let files = [];
+
+            function render() {
+                preview.innerHTML = '';
+                files.forEach((file, index) => {
+                    const chip = document.createElement('div');
+                    chip.className = 'dz-chip';
+                    if (kind === 'image') {
+                        const img = document.createElement('img');
+                        img.src = URL.createObjectURL(file);
+                        chip.appendChild(img);
+                    } else {
+                        const box = document.createElement('div');
+                        box.className = 'dz-doc';
+                        box.innerHTML = "<i class='bx bxs-file-pdf'></i>";
+                        const name = document.createElement('span');
+                        name.textContent = file.name;
+                        box.appendChild(name);
+                        chip.appendChild(box);
+                    }
+                    const remove = document.createElement('button');
+                    remove.type = 'button';
+                    remove.className = 'dz-remove';
+                    remove.title = 'Retirer';
+                    remove.innerHTML = '&times;';
+                    remove.addEventListener('click', () => { files.splice(index, 1); sync(); });
+                    chip.appendChild(remove);
+                    preview.appendChild(chip);
+                });
+                if (countEl) countEl.textContent = files.length + ' / ' + max;
+            }
+
+            function sync() {
+                const dt = new DataTransfer();
+                files.forEach((f) => dt.items.add(f));
+                input.files = dt.files;
+                render();
+            }
+
+            function addFiles(list) {
+                for (const file of list) {
+                    if (files.length >= max) break;
+                    files.push(file);
+                }
+                sync();
+            }
+
+            surface.addEventListener('click', () => input.click());
+            input.addEventListener('change', (event) => addFiles(event.target.files));
+
+            ['dragenter', 'dragover'].forEach((evt) => root.addEventListener(evt, (event) => {
+                event.preventDefault(); event.stopPropagation(); root.classList.add('dz-active');
+            }));
+            ['dragleave', 'drop'].forEach((evt) => root.addEventListener(evt, (event) => {
+                event.preventDefault(); event.stopPropagation(); root.classList.remove('dz-active');
+            }));
+            root.addEventListener('drop', (event) => addFiles(event.dataTransfer.files));
+
+            render();
+        }
+
+        document.querySelectorAll('.js-dropzone').forEach(initDropzone);
+
+        // Pièces déjà enregistrées (modales d'édition) : la croix bascule une coche cachée remove_files[]
+        // plutôt que de supprimer tout de suite — la suppression réelle attend l'enregistrement du formulaire.
+        document.querySelectorAll('.js-edit-information-form').forEach((form) => {
+            form.querySelectorAll('.js-existing-file').forEach((chip) => {
+                const button = chip.querySelector('.js-toggle-remove');
+                const id = chip.dataset.id;
+                let marked = false;
+                button.addEventListener('click', () => {
+                    marked = !marked;
+                    chip.classList.toggle('dz-marked-removed', marked);
+                    if (marked) {
+                        const hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.name = 'remove_files[]';
+                        hidden.value = id;
+                        hidden.dataset.removeFor = id;
+                        form.appendChild(hidden);
+                    } else {
+                        form.querySelector(`input[data-remove-for="${id}"]`)?.remove();
+                    }
+                });
+            });
         });
     </script>
 @endpush

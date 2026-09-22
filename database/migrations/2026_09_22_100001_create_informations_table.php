@@ -16,8 +16,6 @@ return new class extends Migration
             $table->foreignId('commissaire_id')->constrained('users')->restrictOnDelete();
             $table->foreignId('commissariat_id')->constrained('commissariats')->restrictOnDelete();
             $table->text('description')->nullable();
-            $table->string('image_path')->nullable();
-            $table->string('document_path')->nullable();
             $table->dateTime('published_at');
             $table->timestamps();
             $table->softDeletes();

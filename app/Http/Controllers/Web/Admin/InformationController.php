@@ -2,21 +2,25 @@
 
 namespace App\Http\Controllers\Web\Admin;
 
+use App\Enums\InformationFileType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Web\StoreInformationRequest;
 use App\Http\Requests\Web\UpdateInformationRequest;
 use App\Models\Information;
+use App\Models\InformationFile;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 /**
- * Écran Informations (W6) : publiées par les commissaires (description, image ou PDF — au moins un des trois),
- * consultées par tous les rôles Web autorisés. Liste publique par nature (Information::acrossCommissariats(),
- * ARCHITECTURE §11) : ces informations sont déjà exposées sans authentification par l'API (§8, D32), les
- * journaliser à chaque consultation n'ajouterait que du bruit (contrairement au contrôle national d'une moto
- * volée, qui reste un cas sensible à auditer). Modification et suppression réservées à l'auteur de son commissariat.
+ * Écran Informations (W6) : publiées par les commissaires (description, images ou PDF — au moins un des trois,
+ * plusieurs de chaque possible, PROPOSITION TECHNIQUE au-delà du cahier), consultées par tous les rôles Web
+ * autorisés. Liste publique par nature (Information::acrossCommissariats(), ARCHITECTURE §11) : ces informations
+ * sont déjà exposées sans authentification par l'API (§8, D32), les journaliser à chaque consultation n'ajouterait
+ * que du bruit (contrairement au contrôle national d'une moto volée, qui reste un cas sensible à auditer).
+ * Modification et suppression réservées à l'auteur de son commissariat.
  */
 class InformationController extends Controller
 {
@@ -27,7 +31,7 @@ class InformationController extends Controller
         Gate::authorize('viewAny', Information::class);
 
         return view('informations.index', [
-            'informations' => Information::acrossCommissariats()->with(['commissaire', 'commissariat'])->orderByDesc('published_at')->get(),
+            'informations' => Information::acrossCommissariats()->with(['commissaire', 'commissariat', 'files'])->orderByDesc('published_at')->get(),
         ]);
     }
 
@@ -35,39 +39,32 @@ class InformationController extends Controller
     {
         $actor = $request->user();
 
-        Information::create([
+        $information = Information::create([
             'commissaire_id' => $actor->id,
             'commissariat_id' => $actor->commissariat_id,
             'description' => $request->input('description'),
-            'image_path' => $request->file('image')?->store('informations', self::DISK),
-            'document_path' => $request->file('document')?->store('informations', self::DISK),
             'published_at' => now(),
         ]);
+
+        $this->attachFiles($information, $request->file('images', []), InformationFileType::Image);
+        $this->attachFiles($information, $request->file('documents', []), InformationFileType::Document);
 
         return redirect()->route('informations.index')->with('status', 'Information publiée.');
     }
 
     public function update(UpdateInformationRequest $request, Information $information): RedirectResponse
     {
-        $data = ['description' => $request->input('description')];
+        $information->update(['description' => $request->input('description')]);
 
-        if ($request->hasFile('image')) {
-            $this->deleteFile($information->image_path);
-            $data['image_path'] = $request->file('image')->store('informations', self::DISK);
-        } elseif ($request->boolean('remove_image')) {
-            $this->deleteFile($information->image_path);
-            $data['image_path'] = null;
+        $removeIds = $request->input('remove_files', []);
+        if ($removeIds !== []) {
+            foreach ($information->files()->whereIn('id', $removeIds)->get() as $file) {
+                $this->deleteFile($file);
+            }
         }
 
-        if ($request->hasFile('document')) {
-            $this->deleteFile($information->document_path);
-            $data['document_path'] = $request->file('document')->store('informations', self::DISK);
-        } elseif ($request->boolean('remove_document')) {
-            $this->deleteFile($information->document_path);
-            $data['document_path'] = null;
-        }
-
-        $information->update($data);
+        $this->attachFiles($information, $request->file('images', []), InformationFileType::Image, $information->images()->max('position') + 1);
+        $this->attachFiles($information, $request->file('documents', []), InformationFileType::Document, $information->documents()->max('position') + 1);
 
         return redirect()->route('informations.index')->with('status', 'Information modifiée.');
     }
@@ -76,17 +73,32 @@ class InformationController extends Controller
     {
         Gate::authorize('delete', $information);
 
-        $this->deleteFile($information->image_path);
-        $this->deleteFile($information->document_path);
+        foreach ($information->files as $file) {
+            $this->deleteFile($file);
+        }
         $information->delete();
 
         return redirect()->route('informations.index')->with('status', 'Information supprimée.');
     }
 
-    private function deleteFile(?string $path): void
+    /**
+     * @param  list<UploadedFile>  $files
+     */
+    private function attachFiles(Information $information, array $files, InformationFileType $type, int $startPosition = 0): void
     {
-        if ($path !== null) {
-            Storage::disk(self::DISK)->delete($path);
+        foreach (array_values($files) as $index => $file) {
+            InformationFile::create([
+                'information_id' => $information->id,
+                'type' => $type,
+                'path' => $file->store('informations', self::DISK),
+                'position' => $startPosition + $index,
+            ]);
         }
+    }
+
+    private function deleteFile(InformationFile $file): void
+    {
+        Storage::disk(self::DISK)->delete($file->path);
+        $file->delete();
     }
 }

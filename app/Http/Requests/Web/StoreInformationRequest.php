@@ -7,7 +7,8 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Description, image ou fichier PDF (cahier §8) : au moins un des trois, jamais aucun.
+ * Description, images ou PDF (cahier §8) : au moins un des trois. Plusieurs fichiers de chaque
+ * (PROPOSITION TECHNIQUE, plafonnée — Information::MAX_IMAGES / MAX_DOCUMENTS).
  */
 class StoreInformationRequest extends FormRequest
 {
@@ -22,9 +23,11 @@ class StoreInformationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'description' => ['nullable', 'string', 'max:5000', Rule::requiredIf(fn () => ! $this->hasFile('image') && ! $this->hasFile('document'))],
-            'image' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
-            'document' => ['nullable', 'file', 'mimes:pdf', 'max:8192'],
+            'description' => ['nullable', 'string', 'max:5000', Rule::requiredIf(fn () => ! $this->hasFile('images') && ! $this->hasFile('documents'))],
+            'images' => ['array', 'max:'.Information::MAX_IMAGES],
+            'images.*' => ['file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'documents' => ['array', 'max:'.Information::MAX_DOCUMENTS],
+            'documents.*' => ['file', 'mimes:pdf', 'max:8192'],
         ];
     }
 
@@ -32,15 +35,18 @@ class StoreInformationRequest extends FormRequest
     {
         return [
             'description.required' => 'Une description, une image ou un fichier PDF est obligatoire.',
-            'image.mimes' => 'Image au format JPEG, PNG ou WEBP seulement.',
-            'image.max' => 'Image de 4 Mo maximum.',
-            'document.mimes' => 'Fichier PDF seulement.',
-            'document.max' => 'Fichier PDF de 8 Mo maximum.',
+            'images.max' => 'Cinq images au maximum.',
+            'images.*.image' => 'Ce fichier n\'est pas une image valide.',
+            'images.*.mimes' => 'Image au format JPEG, PNG ou WEBP seulement.',
+            'images.*.max' => 'Image de 4 Mo maximum.',
+            'documents.max' => 'Trois fichiers PDF au maximum.',
+            'documents.*.mimes' => 'Fichier PDF seulement.',
+            'documents.*.max' => 'Fichier PDF de 8 Mo maximum.',
         ];
     }
 
     public function attributes(): array
     {
-        return ['description' => 'description', 'image' => 'image', 'document' => 'fichier PDF'];
+        return ['description' => 'description', 'images' => 'images', 'documents' => 'fichiers PDF'];
     }
 }

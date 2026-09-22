@@ -19,7 +19,7 @@ class InformationController extends Controller
     public function index(): AnonymousResourceCollection
     {
         $informations = Information::acrossCommissariats()
-            ->with(['commissaire', 'commissariat'])
+            ->with(['commissaire', 'commissariat', 'files'])
             ->orderByDesc('published_at')
             ->paginate(self::PER_PAGE);
 
