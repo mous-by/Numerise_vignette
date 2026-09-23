@@ -32,6 +32,13 @@ class ProprietaireController extends Controller
             'commissariat_id' => $request->user()->commissariat_id,
         ]);
 
+        // Créé depuis la modale « + Nouveau » de l'écran Motos (W8) : on y retourne avec le propriétaire
+        // fraîchement créé, plutôt que d'atterrir sur l'écran Propriétaires.
+        if ($request->input('return_to') === 'motos') {
+            return redirect()->route('motos.index', ['new_proprietaire' => $proprietaire->id])
+                ->with('status', "Propriétaire « {$proprietaire->fullName()} » créé.");
+        }
+
         return redirect()->route('proprietaires.index')->with('status', "Propriétaire « {$proprietaire->fullName()} » créé.");
     }
 

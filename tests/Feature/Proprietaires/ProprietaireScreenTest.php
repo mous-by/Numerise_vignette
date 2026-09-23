@@ -71,6 +71,19 @@ class ProprietaireScreenTest extends TestCase
         $this->assertSame(1, ActivityLog::where('action', 'proprietaires.created')->count());
     }
 
+    public function test_creating_from_the_motos_page_redirects_back_there_with_the_new_owner(): void
+    {
+        $chef = User::factory()->commissaire()->create();
+
+        $response = $this->actingAs($chef)->post('/proprietaires', [
+            'first_name' => 'Awa', 'last_name' => 'Traoré', 'gender' => 'femme',
+            'address' => 'Hamdallaye ACI 2000', 'phone' => '70 00 00 01', 'return_to' => 'motos',
+        ])->assertSessionHas('status');
+
+        $proprietaire = Proprietaire::sole();
+        $response->assertRedirect(route('motos.index', ['new_proprietaire' => $proprietaire->id]));
+    }
+
     public function test_validation_requires_the_mandatory_fields(): void
     {
         $chef = User::factory()->commissaire()->create();

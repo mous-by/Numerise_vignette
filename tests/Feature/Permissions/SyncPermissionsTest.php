@@ -56,6 +56,7 @@ class SyncPermissionsTest extends TestCase
 
         $commissaire = Role::findByName('commissaire', 'web')->permissions->pluck('name')->sort()->values()->all();
         $this->assertSame([
+            'motos.create', 'motos.delete', 'motos.update', 'motos.view',
             'proprietaires.create', 'proprietaires.delete', 'proprietaires.update', 'proprietaires.view',
             'users.activate', 'users.create', 'users.reset_password', 'users.revoke_access', 'users.update', 'users.view',
         ], $commissaire);
