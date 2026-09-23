@@ -10,7 +10,14 @@
 <div class="modal-body p-4" data-moto-suffix="{{ $idSuffix }}">
     <div class="row g-3">
         <div class="col-6">
-            <label for="proprietaire_id{{ $idSuffix }}" class="form-label fw-semibold">Propriétaire</label>
+            <label for="proprietaire_id{{ $idSuffix }}" class="form-label fw-semibold d-flex align-items-center justify-content-between">
+                <span>Propriétaire</span>
+                @if (! $moto && auth()->user()?->can('create', \App\Models\Proprietaire::class))
+                    <button type="button" class="btn btn-link btn-sm p-0" id="add-proprietaire-btn">
+                        <i class='bx bx-plus-circle'></i> Nouveau
+                    </button>
+                @endif
+            </label>
             <select class="form-select single-select" id="proprietaire_id{{ $idSuffix }}" name="proprietaire_id" required>
                 <option value="">— Choisir —</option>
                 @foreach ($proprietaires as $proprietaire)

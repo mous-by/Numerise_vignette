@@ -83,7 +83,8 @@
     </div>
 
     @can('create', \App\Models\Moto::class)
-        @php($createFailed = $errors->any() && ! old('moto_id'))
+        @php($proprietaireCreateFailed = $errors->any() && $errors->has('first_name'))
+        @php($createFailed = $errors->any() && ! old('moto_id') && ! $proprietaireCreateFailed)
         <div class="modal fade" id="createMotoModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
@@ -100,6 +101,75 @@
                 window.addEventListener('DOMContentLoaded', () => new bootstrap.Modal(document.getElementById('createMotoModal')).show());
             </script>
         @endif
+
+        {{-- Créer un propriétaire sans quitter l'écran Motos : ouverte depuis le bouton « + Nouveau » de la
+             modale de création, elle renvoie ensuite ici avec le propriétaire présélectionné (contrôleur W7). --}}
+        @can('create', \App\Models\Proprietaire::class)
+        <div class="modal fade" id="createProprietaireFromMotoModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form method="POST" action="{{ route('proprietaires.store') }}">
+                        @csrf
+                        <input type="hidden" name="return_to" value="motos">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class='bx bx-user-pin me-2'></i>Nouveau propriétaire</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <label for="moto_prop_first_name" class="form-label fw-semibold">Prénom</label>
+                                    <input type="text" class="form-control @if ($proprietaireCreateFailed && $errors->has('first_name')) is-invalid @endif" id="moto_prop_first_name" name="first_name" value="{{ $proprietaireCreateFailed ? old('first_name') : '' }}" required>
+                                    @if ($proprietaireCreateFailed && $errors->has('first_name'))<div class="invalid-feedback">{{ $errors->first('first_name') }}</div>@endif
+                                </div>
+                                <div class="col-6">
+                                    <label for="moto_prop_last_name" class="form-label fw-semibold">Nom</label>
+                                    <input type="text" class="form-control @if ($proprietaireCreateFailed && $errors->has('last_name')) is-invalid @endif" id="moto_prop_last_name" name="last_name" value="{{ $proprietaireCreateFailed ? old('last_name') : '' }}" required>
+                                    @if ($proprietaireCreateFailed && $errors->has('last_name'))<div class="invalid-feedback">{{ $errors->first('last_name') }}</div>@endif
+                                </div>
+                            </div>
+                            <div class="mb-3 mt-3">
+                                <label for="moto_prop_gender" class="form-label fw-semibold">Genre</label>
+                                <select class="form-select single-select" id="moto_prop_gender" name="gender" required>
+                                    <option value="">— Choisir —</option>
+                                    @foreach (\App\Enums\Genre::cases() as $genre)
+                                        <option value="{{ $genre->value }}" @selected($proprietaireCreateFailed && old('gender') === $genre->value)>{{ $genre->label() }}</option>
+                                    @endforeach
+                                </select>
+                                @if ($proprietaireCreateFailed && $errors->has('gender'))<div class="text-danger small mt-1">{{ $errors->first('gender') }}</div>@endif
+                            </div>
+                            <div class="mb-3">
+                                <label for="moto_prop_address" class="form-label fw-semibold">Adresse</label>
+                                <input type="text" class="form-control @if ($proprietaireCreateFailed && $errors->has('address')) is-invalid @endif" id="moto_prop_address" name="address" value="{{ $proprietaireCreateFailed ? old('address') : '' }}" required>
+                                @if ($proprietaireCreateFailed && $errors->has('address'))<div class="invalid-feedback">{{ $errors->first('address') }}</div>@endif
+                            </div>
+                            <div class="mb-3">
+                                <label for="moto_prop_phone" class="form-label fw-semibold">Numéro de téléphone</label>
+                                <input type="text" class="form-control @if ($proprietaireCreateFailed && $errors->has('phone')) is-invalid @endif" id="moto_prop_phone" name="phone" value="{{ $proprietaireCreateFailed ? old('phone') : '' }}" placeholder="70 00 00 01" required>
+                                @if ($proprietaireCreateFailed && $errors->has('phone'))<div class="invalid-feedback">{{ $errors->first('phone') }}</div>@endif
+                            </div>
+                            <div class="mb-3">
+                                <label for="moto_prop_emergency_contact" class="form-label fw-semibold">Contact en cas d'urgence</label>
+                                <input type="text" class="form-control @if ($proprietaireCreateFailed && $errors->has('emergency_contact')) is-invalid @endif" id="moto_prop_emergency_contact" name="emergency_contact" value="{{ $proprietaireCreateFailed ? old('emergency_contact') : '' }}" placeholder="70 00 00 01">
+                                @if ($proprietaireCreateFailed && $errors->has('emergency_contact'))<div class="invalid-feedback">{{ $errors->first('emergency_contact') }}</div>@endif
+                                <small class="text-muted">Facultatif.</small>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Retour à la moto</button>
+                            <button type="submit" class="btn btn-primary">Enregistrer</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        @if ($proprietaireCreateFailed)
+            <script>
+                window.addEventListener('DOMContentLoaded', () => new bootstrap.Modal(document.getElementById('createProprietaireFromMotoModal')).show());
+            </script>
+        @endif
+        @endcan
     @endcan
 
     @foreach ($motos as $moto)
@@ -164,5 +234,36 @@
             document.getElementById('has_sale_certificate' + suffix).addEventListener('change', () => toggleMotoConditionalFields(suffix));
             document.getElementById('has_witness' + suffix).addEventListener('change', () => toggleMotoConditionalFields(suffix));
         });
+
+        // Créer un propriétaire sans quitter la moto : bascule entre les deux modales, présélection au retour.
+        const motoModalEl = document.getElementById('createMotoModal');
+        const propModalEl = document.getElementById('createProprietaireFromMotoModal');
+
+        if (motoModalEl && propModalEl) {
+            document.getElementById('add-proprietaire-btn')?.addEventListener('click', () => {
+                bootstrap.Modal.getInstance(motoModalEl)?.hide();
+            });
+            motoModalEl.addEventListener('hidden.bs.modal', () => {
+                if (motoModalEl.dataset.openProprietaireNext === '1') {
+                    motoModalEl.dataset.openProprietaireNext = '';
+                    new bootstrap.Modal(propModalEl).show();
+                }
+            });
+            document.getElementById('add-proprietaire-btn')?.addEventListener('click', () => {
+                motoModalEl.dataset.openProprietaireNext = '1';
+            });
+            propModalEl.addEventListener('hidden.bs.modal', () => {
+                new bootstrap.Modal(motoModalEl).show();
+            });
+        }
+
+        // Retour depuis la création du propriétaire (?new_proprietaire=ID) : rouvre la modale moto, présélectionne.
+        const newProprietaireId = new URLSearchParams(window.location.search).get('new_proprietaire');
+        if (newProprietaireId && motoModalEl) {
+            const select = document.getElementById('proprietaire_id');
+            if (select) { $(select).val(newProprietaireId).trigger('change'); }
+            new bootstrap.Modal(motoModalEl).show();
+            window.history.replaceState({}, '', window.location.pathname);
+        }
     </script>
 @endpush

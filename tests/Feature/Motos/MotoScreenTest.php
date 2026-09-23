@@ -53,6 +53,22 @@ class MotoScreenTest extends TestCase
             ->assertSee('modal fade', false);
     }
 
+    public function test_the_create_moto_modal_offers_to_add_a_new_proprietaire_on_the_spot(): void
+    {
+        $this->actingAs(User::factory()->commissaire()->create())->get('/motos')
+            ->assertSee('id="add-proprietaire-btn"', false)
+            ->assertSee('id="createProprietaireFromMotoModal"', false);
+    }
+
+    public function test_the_screen_accepts_a_new_proprietaire_query_parameter_without_error(): void
+    {
+        [$chef, $proprietaire] = $this->actorWithProprietaire();
+
+        $this->actingAs($chef)->get('/motos?new_proprietaire='.$proprietaire->id)
+            ->assertOk()
+            ->assertSee($proprietaire->fullName());
+    }
+
     public function test_a_commissaire_only_sees_the_motos_of_his_own_commissariat(): void
     {
         [$chef, $proprietaire] = $this->actorWithProprietaire();
