@@ -78,6 +78,17 @@ class Moto extends Model
         }
     }
 
+    /**
+     * VGT à jour (W11, cahier §4 contrôle de police : « vignette à jour »). La vignette est valable pour
+     * l'année civile (cahier) : `vgt_year` est fixé à l'enregistrement initial (W8) et sera mis à jour par
+     * W12/W13 (paiement, retrait) au renouvellement — pas encore câblé : jusque-là, une demande de renouvellement
+     * seule (W11, en_attente/validee) ne suffit pas à mettre la vignette à jour.
+     */
+    public function isVgtCurrent(): bool
+    {
+        return $this->vgt_year >= now()->year;
+    }
+
     public function sellerFullName(): ?string
     {
         return $this->has_sale_certificate ? trim("{$this->seller_first_name} {$this->seller_last_name}") : null;

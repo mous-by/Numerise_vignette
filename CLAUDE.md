@@ -249,7 +249,11 @@ tests/                 Feature, Unit, Architecture
 
 Non bloquants pour le socle : durée de conservation de l'audit ; nombre de commissaires par commissariat ; canal de remise du mot de passe temporaire (main propre, SMS plus tard) ; champs additionnels des institutions ; création des agents de mairie par l'admin national et le superadmin seulement ; logo définitif de la plateforme ; **validation des visuels du diaporama de connexion** (images générées par IA, sans texte, drapeau, blason ni marque ; à faire valider par le client avant toute mise en ligne — sur la diapositive 5, les deux agents flous à l'arrière-plan semblent tenir des armes longues : à régénérer avec les prompts de la version 2 si cela gêne).
 
-**Bloquants pour les modules métier** (à traiter avant leur conception) : identification de la population **sans compte** pour la demande de VGT (D32) ; règles de la vignette (durée de validité, tarifs, arriérés) ; paiement (montant, qui confirme, statut, rôle du « code marchand de l'État ») ; qui enregistre « moto retrouvée » (commissaire, police ou les deux) ; workflow mairie (statuts, rejet, confirmation de remise de la carte) ; nature et effet de la « taxe à payer » du contrôle de police ; un propriétaire peut-il avoir plusieurs motos, historique des changements de propriétaire ; opérateur SMS, langue et contenu des messages ; QR Code et Mobile Money : phase 1 ou plus tard.
+**Bloquants pour les modules métier** (à traiter avant leur conception) : identification de la population **sans compte** pour la demande de VGT (D32) ; paiement (montant, qui confirme, statut, rôle du « code marchand de l'État ») ; qui enregistre « moto retrouvée » (commissaire, police ou les deux) ; confirmation de remise de la carte à la mairie (W13) ; nature et effet de la « taxe à payer » du contrôle de police ; un propriétaire peut-il avoir plusieurs motos, historique des changements de propriétaire ; opérateur SMS, langue et contenu des messages ; QR Code et Mobile Money : phase 1 ou plus tard.
+
+~~Règles de la vignette (durée de validité, tarifs, arriérés)~~ → tranché par Amadou (2026-09-27) : validité **par année civile** ; tarif **selon le genre de moto**, configurable (table `tarifs_vgt`, clé = `motos.type_or_brand`) ; arriéré = **majoration fixe** (`config('vgt.late_surcharge_amount')`, déclenchée quand l'année demandée est déjà passée). Recherche de terrain (2026-09-27) : la pratique malienne actuelle n'a pas de pénalité de retard documentée (DGI, pas commissariat/mairie) — cette règle est donc propre à VigiMoto, pas une reproduction de l'existant.
+
+~~Workflow mairie (statuts, rejet)~~ → PROPOSITION TECHNIQUE d'Amadou pour W11 (voir `App\Enums\DemandeVgtStatus`) : en_attente → validée ou rejetée (motif obligatoire, le commissaire corrige et resoumet). La confirmation de remise de la carte physique reste ouverte (W13, pas encore construit).
 
 ~~Identification de la moto (matricule seul ou châssis, unicité)~~ → résolu directement à partir du cahier (W8) : les quatre écrans qui identifient une moto (accueil, déclaration, demande VGT, moto retrouvée, §5 et §9) n'utilisent que le matricule, jamais de châssis. Matricule unique au niveau national (`motos.plate_number`).
 
@@ -364,6 +368,23 @@ Rédigé côté mobile d'après le cahier (§6 « Informations » et « Affichag
 - `published_at` (tri, date affichée) et la pagination sont des PROPOSITIONS TECHNIQUES — À VALIDER.
 - Endpoint **public** : pas de jeton ni de permission, limitation par IP (429 au-delà), aucune donnée personnelle ; il renvoie les informations de **tous** les commissariats (le cahier dit « informations venant des différents commissariats »). Tant qu'il n'existe pas, l'application affiche « Les informations ne sont pas encore disponibles sur le serveur ».
 
+### Contrat du contrôle de police (W11, consommé par M1)
+
+Statut : implémenté et testé (`tests/Feature/Api/ControleApiTest.php`).
+
+| Méthode | Route | Auth | Rôle |
+|---|---|---|---|
+| GET | `/controles?matricule=…` | jeton, `permission:controles.check` | Police uniquement ; lecture nationale (`acrossCommissariats()`) |
+
+```json
+{ "matricule": "AB 1234 CD", "volee": false, "vgt_a_jour": true }
+```
+
+- `matricule` obligatoire (422 s'il manque), normalisé en majuscules côté serveur. Matricule inconnu → `404`.
+- Aucune donnée personnelle du propriétaire : uniquement les deux statuts demandés par le cahier (§4, §8).
+- `vgt_a_jour` lit `motos.vgt_year` (§9, W8) : reste correct pour un premier enregistrement, mais un renouvellement (W11) ne le met pas encore à jour lui-même — ce sera fait par W12/W13 (paiement, retrait), pas encore construits.
+- Contrairement aux lectures ordinaires (non journalisées, §4.5), ce contrôle est audité (`ActivityLogger::read()`, module `controles`) : c'est une action métier de patrouille, pas une simple consultation.
+
 ## 9. Application mobile (`mobile/`)
 
 Application **Expo (React Native, TypeScript, Expo Router)**, à essayer avec **Expo Go**, dans le même dépôt (D29). Elle consomme uniquement l'API `/api/v1` (§8). Mêmes versions d'Expo que le projet KalanNet (SDK 57) : compatible avec le même Expo Go. Pile : `expo-router`, `react-native-paper`, `axios`, `expo-secure-store` (le jeton est stocké dans le Keystore du téléphone, jamais en clair).
@@ -430,13 +451,13 @@ Authentification Web et API, rôles, permissions à deux voies, audit, cloisonne
 | W8 | Module **Motos** | 4 | W7 | non | Amadou |
 | W9 | Module **Déclarations** (vol, braquage, autre) | 3 | W8 | non | Amadou |
 | W10 | Module **Motos retrouvées** | 3 | W9 | police aussi ? (Web/commissaire fait) ; contenu du SMS (W14) | Amadou |
-| W11 | Module **Demandes VGT** (commissaire et mairie) + endpoint de contrôle d'une moto | 4 | W8, W9, W2 | règles de la vignette, workflow mairie | Amadou |
+| W11 | Module **Demandes VGT** (commissaire et mairie) + endpoint de contrôle d'une moto | 4 | W8, W9, W2 | non | Amadou |
 | W12 | Module **Paiements** | 3 | W11 | montant, qui confirme, statuts, code marchand de l'État | Amadou |
 | W13 | Module **Retrait VGT** | 3 | W11, W12 | remise de la carte, « taxe à payer » | Amadou |
 | W14 | Module **SMS** | 3 | W10, W12 | opérateur, langue, contenu | Amadou |
-| M1 | Mobile police : **contrôle d'une moto** | 4 | endpoint livré avec W11 | « taxe à payer » du contrôle | Moustapha |
+| M1 | Mobile police : **contrôle d'une moto** | 4 | endpoint livré avec W11 (fait, §8) | « taxe à payer » du contrôle | Moustapha |
 | M2 | Mobile police : **informations** | 1 | API de W6 | non | Moustapha |
-| M4 | Mobile population : **demande de VGT** et suivi (sans compte) | 3 | API publique de W11, W12 | règles de la vignette, identification sans compte | Moustapha |
+| M4 | Mobile population : **demande de VGT** et suivi (sans compte) | 3 | API publique de W11, W12 (pas encore livrée : W11 n'a construit que les écrans Web commissaire/mairie et l'endpoint de contrôle police, pas de route publique D32) | identification sans compte | Moustapha |
 | M5 | Mobile population : **motos retrouvées** et informations (sans compte) | 2 | API publique de W10, W6 | non | Moustapha |
 
 Hors périmètre pour l'instant : QR Code et Mobile Money (phase 1 ou plus tard, À VALIDER AVEC LE CLIENT), hébergement.
@@ -455,7 +476,7 @@ Chaque tâche suit la checklist du §6, les **règles impératives de l'interfac
 - **W8 Motos** : matricule (identifiant unique national, jamais de châssis — résolu directement à partir du cahier), couleur, genre ou marque, année de la VGT ; attestation de vente (vendeur, témoin si besoin, chacun un seul enregistrement comme la maquette du cahier) ; lien avec le propriétaire (du même commissariat) ; liste, recherche, modification, suppression. **Fait** (`MotoController`, `resources/views/motos/index.blade.php`, `tests/Feature/Motos/MotoScreenTest.php`).
 - **W9 Déclarations** : vol, braquage ou autre (lieu, date, circonstances), liée à une moto du commissariat ; l'identité de la victime n'est pas ressaisie (PROPOSITION TECHNIQUE — déjà portée par `Moto::proprietaire`, le cahier la duplique dans sa maquette). Une déclaration de vol ou de braquage marque la moto liée « Volée » (`Moto::recalculateStolenStatus()`, colonne `motos.is_stolen`, recalculée après création, modification et suppression) ; « autre » ne la marque pas. Base consultable nationalement par tous les agents à travers le futur endpoint de contrôle (W11), pas par cet écran (cloisonné par commissariat comme W7/W8). **Fait** (`DeclarationController`, `resources/views/declarations/index.blade.php`, `tests/Feature/Declarations/DeclarationScreenTest.php`).
 - **W10 Motos retrouvées** : enregistrement (lieu et date d'arrêt) par le commissariat qui l'a retrouvée — pas forcément celui où elle a été déclarée volée, d'où une lecture nationale des motos actuellement volées (§4.7, `acrossCommissariats()`, premier module à en avoir besoin avant W11) ; récupération (case à cocher + date, sans autre effet, PROPOSITION TECHNIQUE) ; SMS automatique au propriétaire (via W14, pas encore câblé). Fournit l'endpoint de lecture consommé par M5. Le blocage client ne porte plus que sur « la police aussi ? » (mobile, Moustapha) et le contenu du SMS (W14) : côté Web/commissaire, le cahier est sans ambiguïté (menu du commissaire, §3). **Fait** (`MotoRetrouveeController`, `resources/views/motos-retrouvees/index.blade.php`, `tests/Feature/MotosRetrouvees/MotoRetrouveeScreenTest.php`).
-- **W11 Demandes VGT** : côté commissaire (matricule, année, commissariat, mairie de retrait, contact SMS, code marchand) et côté mairie (formulaire VGT, validation, statuts, rejet). Publie la méthode « VGT à jour » sur `Moto` et livre l'**endpoint de contrôle** (matricule → moto volée ou non, VGT à jour) : lecture nationale via `acrossCommissariats()`, protégée par permission et auditée. Fournit aussi l'API de demande et de suivi consommée par M4.
+- **W11 Demandes VGT** : côté commissaire (moto, mairie de retrait, année, contact SMS, code marchand) et côté mairie (validation ou rejet, motif obligatoire). Ni `BelongsToCommissariat` ni `BelongsToMairie` seuls : une demande est visible du commissariat qui l'a déposée **et** de la mairie choisie (`DemandeVgt::scopeVisibleTo()`, comme `User::visibleTo()`, §4.7). Workflow (`en_attente` → `validee`/`rejetee`, resoumission après rejet) et majoration pour arriéré : PROPOSITION TECHNIQUE tranchée par Amadou (§5) — durée par année civile, tarif configurable par genre de moto (`tarifs_vgt`, réglage géré par le superadmin et l'admin national depuis l'écran), majoration fixe si l'année demandée est déjà passée. Publie `Moto::isVgtCurrent()` (lit `motos.vgt_year`, pas encore mis à jour au renouvellement — ce sera W12/W13) et livre l'**endpoint de contrôle** `GET /api/v1/controles?matricule=` (police uniquement, cahier §4/§8) : lecture nationale via `acrossCommissariats()`, permission `controles.check`, audité (`ActivityLogger::read()`, contrairement aux lectures ordinaires). **Fait** (`DemandeVgtController`, `TarifVgtController`, `Api\V1\ControleController`, `resources/views/demandes-vgt/`, `tests/Feature/DemandesVgt/DemandeVgtScreenTest.php`, `tests/Feature/Api/ControleApiTest.php`). **Reste à faire** pour M4 : aucune route publique (D32) de demande/suivi pour la population — ce round n'a livré que les écrans Web et le contrôle police.
 - **W12 Paiements** : paiement par le code marchand de l'État, confirmation, statuts ; API consommée par M4.
 - **W13 Retrait VGT** : date de retrait, aperçu et impression de la carte ; cas VGT en jour, non en jour, non enregistrée (taxe).
 - **W14 SMS** : service d'envoi (opérateur à choisir avec le client), déclenché par les événements « moto retrouvée » et « paiement confirmé », en file d'attente, audité.

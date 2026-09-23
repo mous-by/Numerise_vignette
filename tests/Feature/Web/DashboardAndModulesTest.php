@@ -101,23 +101,28 @@ class DashboardAndModulesTest extends TestCase
         $this->assertGreaterThanOrEqual(11, $expected->count());
 
         // Superadmin : voit tout, y compris les modules déjà implémentés (via leur vraie route désormais, plus
-        // la fiche « à venir » — même libellé visible dans les deux cas).
+        // la fiche « à venir » — même libellé visible dans les deux cas), sauf « Contrôle de police » : réservé
+        // au canal API (police, D31/§4.3), aucune entrée Web même pour le superadmin (navigation => []).
         $page = $this->actingAs($this->superadmin())->get('/')->assertOk()->assertSee('Modules à venir');
-        foreach ($expected as $label) {
+        foreach ($expected->reject(fn ($label) => $label === 'Contrôle de police') as $label) {
             $page->assertSee($label);
         }
 
         // Admin national : pareil, sauf Propriétaires, Motos, Déclarations et Motos retrouvées — réservés au
         // commissaire par défaut (données personnelles des citoyens, pas une supervision nationale par défaut
-        // comme les institutions, W7 à W10).
+        // comme les institutions, W7 à W10) — et sauf Contrôle de police (API seulement, aucune permission
+        // possible côté Web). Demandes VGT reste visible : `view` lui est donné en plus de `manage_tarifs`,
+        // sinon le bouton « Tarifs », imbriqué dans cet écran, serait inatteignable.
         $adminPage = $this->actingAs(User::factory()->adminNational()->create())->get('/')->assertOk()->assertSee('Modules à venir');
-        $reserved = ['Propriétaires', 'Motos', 'Déclarations', 'Motos retrouvées'];
+        $reserved = ['Propriétaires', 'Motos', 'Déclarations', 'Motos retrouvées', 'Contrôle de police'];
         foreach ($expected->reject(fn ($label) => in_array($label, $reserved, true)) as $label) {
             $adminPage->assertSee($label);
         }
-        foreach ($reserved as $label) {
+        foreach (['Propriétaires', 'Déclarations', 'Contrôle de police'] as $label) {
             $adminPage->assertDontSee($label);
         }
+        // Pas de assertDontSee('Motos') : « Motos retrouvées » (réservé au commissaire aussi, mais déjà exclu
+        // du foreach ci-dessus) le contiendrait.
     }
 
     public function test_each_web_role_sees_the_modules_the_cahier_gives_it(): void
@@ -142,17 +147,17 @@ class DashboardAndModulesTest extends TestCase
     {
         $agent = User::factory()->mairie()->create();
 
-        $this->get('/modules/controles')->assertRedirect('/login'); // invité, avant toute authentification
-        $this->actingAs($agent)->get('/modules/controles')->assertNotFound();
+        $this->get('/modules/qr-code')->assertRedirect('/login'); // invité, avant toute authentification
+        $this->actingAs($agent)->get('/modules/qr-code')->assertNotFound();
         $this->actingAs($agent)->get('/modules/n-existe-pas')->assertNotFound();
     }
 
     public function test_a_module_leaves_the_planned_list_when_its_manifest_exists(): void
     {
         $superadmin = $this->superadmin();
-        config(['modules.controles' => ['label' => 'Contrôle de police', 'permissions' => ['view' => 'Voir'], 'roles' => []]]);
+        config(['modules.qr-code' => ['label' => 'QR Code', 'permissions' => ['view' => 'Voir'], 'roles' => []]]);
 
-        $this->actingAs($superadmin)->get('/modules/controles')->assertNotFound();
+        $this->actingAs($superadmin)->get('/modules/qr-code')->assertNotFound();
         $this->actingAs($superadmin)->get('/modules/sms')->assertOk();
     }
 

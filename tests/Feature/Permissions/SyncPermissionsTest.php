@@ -50,20 +50,29 @@ class SyncPermissionsTest extends TestCase
 
         $admin = Role::findByName('admin_national', 'web')->permissions->pluck('name')->sort()->values()->all();
         $this->assertSame([
-            'commissariats.create', 'commissariats.update', 'commissariats.view', 'mairies.create', 'mairies.update', 'mairies.view',
+            'commissariats.create', 'commissariats.update', 'commissariats.view',
+            'demandes-vgt.manage_tarifs', 'demandes-vgt.view',
+            'mairies.create', 'mairies.update', 'mairies.view',
             'users.activate', 'users.create', 'users.reset_password', 'users.revoke_access', 'users.update', 'users.view',
         ], $admin);
 
         $commissaire = Role::findByName('commissaire', 'web')->permissions->pluck('name')->sort()->values()->all();
         $this->assertSame([
             'declarations.create', 'declarations.delete', 'declarations.update', 'declarations.view',
+            'demandes-vgt.create', 'demandes-vgt.update', 'demandes-vgt.view',
             'motos-retrouvees.create', 'motos-retrouvees.update', 'motos-retrouvees.view',
             'motos.create', 'motos.delete', 'motos.update', 'motos.view',
             'proprietaires.create', 'proprietaires.delete', 'proprietaires.update', 'proprietaires.view',
             'users.activate', 'users.create', 'users.reset_password', 'users.revoke_access', 'users.update', 'users.view',
         ], $commissaire);
 
-        foreach (['mairie', 'police', 'population', 'superadmin'] as $role) {
+        $mairie = Role::findByName('mairie', 'web')->permissions->pluck('name')->sort()->values()->all();
+        $this->assertSame(['demandes-vgt.validate', 'demandes-vgt.view'], $mairie);
+
+        $police = Role::findByName('police', 'web')->permissions->pluck('name')->sort()->values()->all();
+        $this->assertSame(['controles.check'], $police);
+
+        foreach (['population', 'superadmin'] as $role) {
             $this->assertCount(0, Role::findByName($role, 'web')->permissions, "Le rôle $role n'a aucun défaut au socle.");
         }
     }
