@@ -19,7 +19,7 @@ return [
         ],
     ],
 
-    'navigation' => [
-        ['label' => 'Commissariats', 'icon' => 'bx bx-buildings', 'route' => 'commissariats.index', 'permission' => 'commissariats.view', 'active' => 'commissariats.*', 'order' => 10],
-    ],
+    // Pas d'entrée de sidebar : l'écran s'ouvre depuis le sous-menu Paramètres (configuration/_menu.blade.php),
+    // qui la propose déjà, comme Utilisateurs, Audit et Système.
+    'navigation' => [],
 ];
