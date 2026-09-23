@@ -1,6 +1,11 @@
 @php
     $v = fn (string $field, $default = '') => $failed ? old($field) : ($moto?->{$field} ?? $default);
     $checked = fn (string $field) => $failed ? (bool) old($field) : (bool) ($moto?->{$field} ?? false);
+    // Select2 en recherche (AJAX, MotoController::search() n'affiche pas tout le commissariat) : seule l'option
+    // déjà choisie est pré-rendue, le reste se charge en tapant.
+    $selectedProprietaire = $moto?->proprietaire
+        ?? ($failed && old('proprietaire_id') ? \App\Models\Proprietaire::find(old('proprietaire_id')) : null)
+        ?? (! $moto ? ($preselectedProprietaire ?? null) : null);
 @endphp
 
 <div class="modal-header">
@@ -18,11 +23,10 @@
                     </button>
                 @endif
             </label>
-            <select class="form-select single-select" id="proprietaire_id{{ $idSuffix }}" name="proprietaire_id" required>
-                <option value="">— Choisir —</option>
-                @foreach ($proprietaires as $proprietaire)
-                    <option value="{{ $proprietaire->id }}" @selected($v('proprietaire_id') == $proprietaire->id)>{{ $proprietaire->fullName() }}</option>
-                @endforeach
+            <select class="form-select ajax-select" id="proprietaire_id{{ $idSuffix }}" name="proprietaire_id" data-search-url="{{ route('proprietaires.search') }}" data-placeholder="Rechercher un propriétaire…" required>
+                @if ($selectedProprietaire)
+                    <option value="{{ $selectedProprietaire->id }}" selected>{{ $selectedProprietaire->fullName() }}</option>
+                @endif
             </select>
             @if ($failed && $errors->has('proprietaire_id'))<div class="text-danger small mt-1">{{ $errors->first('proprietaire_id') }}</div>@endif
         </div>

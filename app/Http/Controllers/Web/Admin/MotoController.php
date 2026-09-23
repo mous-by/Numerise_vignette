@@ -7,7 +7,9 @@ use App\Http\Requests\Web\StoreMotoRequest;
 use App\Http\Requests\Web\UpdateMotoRequest;
 use App\Models\Moto;
 use App\Models\Proprietaire;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
@@ -24,8 +26,30 @@ class MotoController extends Controller
 
         return view('motos.index', [
             'motos' => Moto::with('proprietaire')->orderBy('plate_number')->get(),
-            'proprietaires' => Proprietaire::orderBy('last_name')->orderBy('first_name')->get(),
+            // Le select Propriétaire (modale) charge par recherche (Select2 AJAX, search()) plutôt que tout
+            // précharger : ce booléen suffit à savoir s'il faut proposer « Ajouter » ou « Créez d'abord ... ».
+            'hasProprietaires' => Proprietaire::query()->exists(),
         ]);
+    }
+
+    /**
+     * Recherche pour le select Propriétaire de la modale de création/modification : commissariat trop peuplé
+     * pour tout charger. Format attendu par Select2 : `{"results": [{"id", "text"}, ...]}`.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        Gate::authorize('viewAny', Moto::class);
+
+        $term = trim((string) $request->query('q', ''));
+
+        $motos = Moto::with('proprietaire')
+            ->when($term !== '', fn ($query) => $query->where('plate_number', 'like', "%{$term}%"))
+            ->orderBy('plate_number')
+            ->limit(20)
+            ->get()
+            ->map(fn (Moto $moto) => ['id' => $moto->id, 'text' => "{$moto->plate_number} — {$moto->proprietaire->fullName()}"]);
+
+        return response()->json(['results' => $motos]);
     }
 
     public function store(StoreMotoRequest $request): RedirectResponse

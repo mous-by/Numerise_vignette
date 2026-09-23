@@ -20,7 +20,7 @@
         <div class="card-header card-header-brand d-flex align-items-center justify-content-between flex-wrap gap-2">
             <h6 class="mb-0 text-white"><i class='bx bx-cycling me-2'></i>MOTOS</h6>
             @can('create', \App\Models\Moto::class)
-                @if ($proprietaires->isEmpty())
+                @if (! $hasProprietaires)
                     <span class="badge bg-light text-dark">Créez d'abord un propriétaire</span>
                 @else
                     <button type="button" class="btn btn-light btn-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#createMotoModal">
@@ -85,12 +85,15 @@
     @can('create', \App\Models\Moto::class)
         @php($proprietaireCreateFailed = $errors->any() && $errors->has('first_name'))
         @php($createFailed = $errors->any() && ! old('moto_id') && ! $proprietaireCreateFailed)
+        {{-- Revenue de la modale « + Nouveau propriétaire » (ProprietaireController::store, return_to=motos) : la
+             recherche AJAX du select ne connaît pas encore ce propriétaire tout juste créé, on le pré-rend. --}}
+        @php($preselectedProprietaire = request()->filled('new_proprietaire') ? \App\Models\Proprietaire::find(request()->query('new_proprietaire')) : null)
         <div class="modal fade" id="createMotoModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
                     <form method="POST" action="{{ route('motos.store') }}">
                         @csrf
-                        @include('motos._form', ['moto' => null, 'failed' => $createFailed, 'idSuffix' => ''])
+                        @include('motos._form', ['moto' => null, 'failed' => $createFailed, 'idSuffix' => '', 'preselectedProprietaire' => $preselectedProprietaire])
                     </form>
                 </div>
             </div>
@@ -257,11 +260,9 @@
             });
         }
 
-        // Retour depuis la création du propriétaire (?new_proprietaire=ID) : rouvre la modale moto, présélectionne.
-        const newProprietaireId = new URLSearchParams(window.location.search).get('new_proprietaire');
-        if (newProprietaireId && motoModalEl) {
-            const select = document.getElementById('proprietaire_id');
-            if (select) { $(select).val(newProprietaireId).trigger('change'); }
+        // Retour depuis la création du propriétaire (?new_proprietaire=ID) : la modale moto le pré-affiche déjà
+        // (côté serveur, la recherche AJAX ne le connaît pas encore) — on rouvre juste la modale et nettoie l'URL.
+        if (new URLSearchParams(window.location.search).get('new_proprietaire') && motoModalEl) {
             new bootstrap.Modal(motoModalEl).show();
             window.history.replaceState({}, '', window.location.pathname);
         }

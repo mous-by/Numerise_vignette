@@ -21,9 +21,9 @@ class SchemaTest extends TestCase
         $tables = collect(Schema::getTables(schema: DB::getDatabaseName()))->pluck('name')->reject(fn ($name) => $name === 'migrations')->sort()->values()->all();
 
         $expected = [
-            'activity_logs', 'cache', 'cache_locks', 'commissariats', 'failed_jobs', 'job_batches', 'jobs', 'mairies',
-            'model_has_permissions', 'model_has_roles', 'motos', 'permissions', 'personal_access_tokens', 'proprietaires',
-            'role_has_permissions', 'roles', 'sessions', 'users',
+            'activity_logs', 'cache', 'cache_locks', 'commissariats', 'declarations', 'failed_jobs', 'job_batches',
+            'jobs', 'mairies', 'model_has_permissions', 'model_has_roles', 'motos', 'permissions',
+            'personal_access_tokens', 'proprietaires', 'role_has_permissions', 'roles', 'sessions', 'users',
         ];
 
         $this->assertSame($expected, $tables);

@@ -35,6 +35,17 @@ class ProprietaireScreenTest extends TestCase
         $this->actingAs(User::factory()->commissaire()->create())->get('/proprietaires')->assertOk()->assertSee('PROPRIÉTAIRES');
     }
 
+    public function test_the_search_endpoint_matches_by_name_and_is_cloisonne(): void
+    {
+        $chef = User::factory()->commissaire()->create();
+        $mine = Proprietaire::factory()->create(['commissariat_id' => $chef->commissariat_id, 'first_name' => 'Awa', 'last_name' => 'Traoré']);
+        Proprietaire::factory()->create(['first_name' => 'Awa', 'last_name' => 'Ailleurs']); // autre commissariat
+
+        $this->actingAs($chef)->getJson('/proprietaires/search?q=Awa')
+            ->assertOk()
+            ->assertExactJson(['results' => [['id' => $mine->id, 'text' => $mine->fullName()]]]);
+    }
+
     public function test_it_follows_the_theme_template(): void
     {
         $this->actingAs(User::factory()->commissaire()->create())->get('/proprietaires')

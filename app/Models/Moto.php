@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DeclarationType;
 use App\Models\Concerns\BelongsToCommissariat;
 use App\Models\Concerns\LogsActivity;
 use Database\Factories\MotoFactory;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -33,6 +35,7 @@ class Moto extends Model
             'vgt_year' => 'integer',
             'has_sale_certificate' => 'boolean',
             'has_witness' => 'boolean',
+            'is_stolen' => 'boolean',
         ];
     }
 
@@ -42,6 +45,37 @@ class Moto extends Model
     public function proprietaire(): BelongsTo
     {
         return $this->belongsTo(Proprietaire::class);
+    }
+
+    /**
+     * @return HasMany<Declaration, $this>
+     */
+    public function declarations(): HasMany
+    {
+        return $this->hasMany(Declaration::class);
+    }
+
+    /**
+     * Recalcule `is_stolen` à partir des déclarations actives (cahier §5 Cas 2) : volée si au moins une
+     * déclaration de vol ou de braquage n'a pas été supprimée. Appelé après toute création, modification ou
+     * suppression d'une déclaration (W9) ; jamais modifiable depuis le formulaire Motos lui-même (pas dans
+     * `Fillable`).
+     */
+    public function recalculateStolenStatus(): void
+    {
+        // acrossCommissariats() : la moto et ses déclarations partagent toujours le même commissariat (validé à
+        // la création), mais on ne veut pas dépendre du contexte de l'utilisateur courant (Auth::user()) pour un
+        // calcul qui doit rester correct quel que soit l'appelant.
+        $stolen = Declaration::query()->acrossCommissariats()
+            ->where('moto_id', $this->id)
+            ->whereIn('type', [DeclarationType::Vol->value, DeclarationType::Braquage->value])
+            ->exists();
+
+        if ($this->is_stolen !== $stolen) {
+            // `is_stolen` n'est pas dans Fillable (jamais modifiable depuis le formulaire Motos) : forceFill
+            // contourne volontairement la protection en masse pour cette seule écriture système, calculée par W9.
+            $this->forceFill(['is_stolen' => $stolen])->save();
+        }
     }
 
     public function sellerFullName(): ?string

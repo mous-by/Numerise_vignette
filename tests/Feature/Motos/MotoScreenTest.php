@@ -60,6 +60,17 @@ class MotoScreenTest extends TestCase
             ->assertSee('id="createProprietaireFromMotoModal"', false);
     }
 
+    public function test_the_search_endpoint_matches_by_plate_number_and_is_cloisonne(): void
+    {
+        [$chef, $proprietaire] = $this->actorWithProprietaire();
+        $mine = Moto::factory()->create(['commissariat_id' => $chef->commissariat_id, 'proprietaire_id' => $proprietaire->id, 'plate_number' => 'AB 1234 CD']);
+        Moto::factory()->create(['plate_number' => 'AB 9999 CD']); // autre commissariat
+
+        $this->actingAs($chef)->getJson('/motos/search?q=1234')
+            ->assertOk()
+            ->assertExactJson(['results' => [['id' => $mine->id, 'text' => "AB 1234 CD — {$proprietaire->fullName()}"]]]);
+    }
+
     public function test_the_screen_accepts_a_new_proprietaire_query_parameter_without_error(): void
     {
         [$chef, $proprietaire] = $this->actorWithProprietaire();
