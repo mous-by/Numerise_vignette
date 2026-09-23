@@ -2,6 +2,7 @@
 
 namespace App\Models\Concerns;
 
+use App\Exceptions\MissingInstitutionException;
 use App\Models\Mairie;
 use App\Models\Scopes\InstitutionScope;
 use Illuminate\Database\Eloquent\Builder;
@@ -23,6 +24,11 @@ trait BelongsToMairie
         static::creating(function (Model $model) {
             if ($model->getAttribute('mairie_id') === null && ($id = Auth::user()?->mairie_id)) {
                 $model->setAttribute('mairie_id', $id);
+            }
+
+            // Logique métier, jamais contournée (même par le superadmin, D16) : voir BelongsToCommissariat.
+            if ($model->getAttribute('mairie_id') === null) {
+                throw new MissingInstitutionException(class_basename($model));
             }
         });
     }

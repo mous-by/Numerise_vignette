@@ -2,6 +2,7 @@
 
 namespace App\Models\Concerns;
 
+use App\Exceptions\MissingInstitutionException;
 use App\Models\Commissariat;
 use App\Models\Scopes\InstitutionScope;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,6 +26,14 @@ trait BelongsToCommissariat
         static::creating(function (Model $model) {
             if ($model->getAttribute('commissariat_id') === null && ($id = Auth::user()?->commissariat_id)) {
                 $model->setAttribute('commissariat_id', $id);
+            }
+
+            // Logique métier, jamais contournée (même par le superadmin, D16) : contrairement à la permission,
+            // ça ne passe pas par Gate::before. Sans ce garde-fou, un compte sans institution (superadmin, admin
+            // national) qui atteint quand même l'action plante sur la contrainte NOT NULL de la colonne, sans
+            // message clair (vécu avec Information, W6).
+            if ($model->getAttribute('commissariat_id') === null) {
+                throw new MissingInstitutionException(class_basename($model));
             }
         });
     }
