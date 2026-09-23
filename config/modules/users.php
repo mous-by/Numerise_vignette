@@ -32,7 +32,7 @@ return [
         ],
     ],
 
-    'navigation' => [
-        ['label' => 'Utilisateurs', 'icon' => 'bx bx-user-circle', 'route' => 'users.index', 'permission' => 'users.view', 'active' => 'users.*', 'order' => 30],
-    ],
+    // Pas d'entrée de sidebar : l'écran s'ouvre depuis le sous-menu Paramètres (configuration/_menu.blade.php),
+    // qui la propose déjà, comme Audit et Système.
+    'navigation' => [],
 ];

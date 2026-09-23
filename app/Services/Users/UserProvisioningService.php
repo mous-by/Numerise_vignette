@@ -96,6 +96,51 @@ class UserProvisioningService
     }
 
     /**
+     * Modification d'un compte par un supérieur (W5, D9, plafond de rôle) : nom et numéro toujours ; institution et
+     * statut seulement si le contrôleur les inclut dans $data (institution réservée à l'admin national et au
+     * superadmin, statut réservé à `users.activate` — ce service ne fait qu'appliquer et valider ce qu'il reçoit).
+     *
+     * @param  array<string, mixed>  $data
+     *
+     * @throws AuthorizationException
+     * @throws ValidationException
+     */
+    public function updateByAdmin(User $actor, User $target, array $data): void
+    {
+        if (! $actor->isSuperadmin() && ! ($actor->roleName()?->canManage($target->roleName() ?? RoleName::Population) ?? false)) {
+            throw new AuthorizationException('Vous ne pouvez pas modifier ce compte.');
+        }
+
+        $institution = $target->roleName()?->institution();
+
+        $rules = [
+            'name' => ['required', 'string', 'max:150'],
+            'phone' => ['required', 'string', 'regex:'.PhoneNumber::E164_PATTERN, Rule::unique('users', 'phone')->ignore($target->getKey())],
+        ];
+
+        if (array_key_exists('commissariat_id', $data) || array_key_exists('mairie_id', $data)) {
+            $rules['commissariat_id'] = [$institution === 'commissariat' ? 'required' : 'prohibited', 'nullable', 'integer', Rule::exists('commissariats', 'id')->whereNull('deleted_at')->where('is_active', true)];
+            $rules['mairie_id'] = [$institution === 'mairie' ? 'required' : 'prohibited', 'nullable', 'integer', Rule::exists('mairies', 'id')->whereNull('deleted_at')->where('is_active', true)];
+        }
+
+        if (array_key_exists('is_active', $data)) {
+            $rules['is_active'] = ['boolean'];
+        }
+
+        $data['phone'] = PhoneNumber::normalize($data['phone'] ?? null) ?? ($data['phone'] ?? null);
+
+        $validated = Validator::make($data, $rules, [
+            'phone.regex' => 'Le numéro de téléphone n\'est pas valide (exemple : 70 00 00 01).',
+            'commissariat_id.prohibited' => 'Ce rôle n\'est pas rattaché à un commissariat.',
+            'commissariat_id.required' => 'Ce rôle exige un commissariat.',
+            'mairie_id.prohibited' => 'Ce rôle n\'est pas rattaché à une mairie.',
+            'mairie_id.required' => 'Ce rôle exige une mairie.',
+        ])->validate();
+
+        $target->update($validated);
+    }
+
+    /**
      * Changement de mot de passe par l'utilisateur lui-même : lève l'obligation de changement, coupe les autres
      * sessions et révoque les jetons API.
      */
