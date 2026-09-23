@@ -100,12 +100,20 @@ class DashboardAndModulesTest extends TestCase
         $expected = collect(config('planned_modules'))->pluck('label');
         $this->assertGreaterThanOrEqual(11, $expected->count());
 
-        foreach ([$this->superadmin(), User::factory()->adminNational()->create()] as $user) {
-            $page = $this->actingAs($user)->get('/')->assertOk()->assertSee('Modules à venir');
-            foreach ($expected as $label) {
-                $page->assertSee($label);
-            }
+        // Superadmin : voit tout, y compris les modules déjà implémentés (via leur vraie route désormais, plus
+        // la fiche « à venir » — même libellé visible dans les deux cas).
+        $page = $this->actingAs($this->superadmin())->get('/')->assertOk()->assertSee('Modules à venir');
+        foreach ($expected as $label) {
+            $page->assertSee($label);
         }
+
+        // Admin national : pareil, sauf Propriétaires — réservé au commissaire par défaut (données personnelles
+        // des citoyens, pas une supervision nationale par défaut comme les institutions ou les informations, W7).
+        $adminPage = $this->actingAs(User::factory()->adminNational()->create())->get('/')->assertOk()->assertSee('Modules à venir');
+        foreach ($expected->reject(fn ($label) => $label === 'Propriétaires') as $label) {
+            $adminPage->assertSee($label);
+        }
+        $adminPage->assertDontSee('Propriétaires');
     }
 
     public function test_each_web_role_sees_the_modules_the_cahier_gives_it(): void
@@ -141,7 +149,7 @@ class DashboardAndModulesTest extends TestCase
         config(['modules.motos' => ['label' => 'Motos', 'permissions' => ['view' => 'Voir'], 'roles' => []]]);
 
         $this->actingAs($superadmin)->get('/modules/motos')->assertNotFound();
-        $this->actingAs($superadmin)->get('/modules/proprietaires')->assertOk();
+        $this->actingAs($superadmin)->get('/modules/declarations')->assertOk();
     }
 
     /** Le HTML de la sidebar seule (le corps de la page peut contenir les mêmes mots). */
