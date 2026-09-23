@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, FlatList, Linking, RefreshControl, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, Image, Linking, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { ActivityIndicator, Button, Card, Text } from 'react-native-paper';
 import MockBanner from '@/components/MockBanner';
 import { api, apiErrorMessage, isNotFound } from '@/lib/api';
@@ -9,7 +9,7 @@ import type { Information, Paginated } from '@/types/api';
 
 // M2 et M5 : les informations publiées par les commissaires (cahier §6 et §8), en lecture seule, pour la police (onglet)
 // et pour la population (espace public, sans connexion, D32). Chaque carte affiche, comme au cahier, la description,
-// l'image ou le fichier PDF, puis le nom du commissaire et du commissariat.
+// les images et les fichiers PDF (plusieurs de chaque possible, W6), puis le nom du commissaire et du commissariat.
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -108,13 +108,25 @@ export default function InformationsList() {
       ListFooterComponent={loadingMore ? <ActivityIndicator style={{ marginVertical: 12 }} /> : items.length > 0 && error ? <Text style={styles.footerError}>{error}</Text> : null}
       renderItem={({ item }) => (
         <Card style={styles.card}>
-          {item.image_url ? <Card.Cover source={{ uri: item.image_url }} /> : null}
+          {item.image_urls.length === 1 ? (
+            <Card.Cover source={{ uri: item.image_urls[0] }} />
+          ) : item.image_urls.length > 1 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.gallery} contentContainerStyle={styles.galleryContent}>
+              {item.image_urls.map((url) => (
+                <Image key={url} source={{ uri: url }} style={styles.galleryImage} />
+              ))}
+            </ScrollView>
+          ) : null}
           <Card.Content style={styles.body}>
             {item.description ? <Text>{item.description}</Text> : null}
-            {item.document_url ? (
-              <Button mode="outlined" icon="file-pdf-box" onPress={() => openDocument(item.document_url as string)} style={styles.document}>
-                Ouvrir le document (PDF)
-              </Button>
+            {item.document_urls.length > 0 ? (
+              <View style={styles.documents}>
+                {item.document_urls.map((url, index) => (
+                  <Button key={url} mode="outlined" icon="file-pdf-box" onPress={() => openDocument(url)} style={styles.document}>
+                    {item.document_urls.length > 1 ? `Document ${index + 1} (PDF)` : 'Ouvrir le document (PDF)'}
+                  </Button>
+                ))}
+              </View>
             ) : null}
             <View style={styles.meta}>
               <Text style={styles.author}>{item.commissaire_name}</Text>
@@ -134,6 +146,10 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
   card: { borderRadius: 14, overflow: 'hidden' },
   body: { gap: 10, paddingVertical: 12 },
+  gallery: { maxHeight: 180 },
+  galleryContent: { gap: 8, padding: 8 },
+  galleryImage: { width: 240, height: 164, borderRadius: 10 },
+  documents: { gap: 8, alignItems: 'flex-start' },
   document: { alignSelf: 'flex-start' },
   meta: { gap: 2, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingTop: 8 },
   author: { fontWeight: '700', color: colors.text },

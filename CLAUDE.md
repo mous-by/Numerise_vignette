@@ -67,7 +67,7 @@ Cas d'usage : (1) enregistrement initial et acquisition de la VGT au commissaria
 - Audit synchrone immuable, cloisonnement institutionnel fail-closed, protection du dernier superadmin, superadmins créés automatiquement.
 - Tableau de bord (deux vues) en données fictives activables, sidebar listant tous les modules à venir, **Paramètres** en bas de la sidebar.
 - Profil à deux onglets (informations, mot de passe), page de connexion avec formulaire à droite et diaporama d'images, survol unifié dans toute l'interface.
-- API mobile d'authentification (`/api/v1`) et application Expo (connexion, changement de mot de passe, profil, **informations** de la police en mode maquette, M2).
+- API mobile d'authentification (`/api/v1`) et application Expo (connexion, changement de mot de passe, profil, **informations** de la police, M2, contre l'API réelle).
 - 16 tables migrées, tests automatiques (`composer test`), thème et assets locaux.
 
 **Reste** : voir §10 (backlog).
@@ -350,7 +350,7 @@ Tant que le mot de passe est **temporaire**, `password_change_required` vaut `tr
 
 ### Contrat des informations (W6, consommé par M2 et M5)
 
-Statut : implémenté côté Web et API (branche `feature/w6-informations`, à valider par Moustapha en revue). Écran Web : le commissaire publie (description, images ou PDF — au moins un des trois), tous les rôles Web autorisés consultent (liste non cloisonnée par commissariat, publique par nature). Rédigé côté mobile d'après le cahier (§6 « Informations » et « Affichage ») ; l'application mobile est écrite contre ce contrat (mode maquette, §9) et passera à l'API réelle une fois la branche fusionnée.
+Statut : **fusionné et en service** (Web, API, mobile). Écran Web : le commissaire publie (description, images ou PDF — au moins un des trois), tous les rôles Web autorisés consultent (liste non cloisonnée par commissariat, publique par nature). L'application mobile (M2, M5) consomme l'API réelle ; le mode maquette (§9) reste disponible pour développer un écran futur avant que son endpoint existe.
 
 **⚠️ Changement par rapport à la première version de ce contrat** : le cahier ne prévoit qu'**une** image et **un** PDF par publication. `image_url`/`document_url` (singuliers) sont devenus `image_urls`/`document_urls` (**tableaux**, plusieurs pièces jointes de chaque, glisser-déposer côté Web) — PROPOSITION TECHNIQUE au-delà du cahier, À VALIDER AVEC LE CLIENT à terme, mais déjà implémentée des deux côtés (glisser-déposer Web + tableaux API) puisque rien n'est encore fusionné. **À signaler explicitement à Moustapha avant qu'il code l'affichage mobile contre ce contrat**, pour éviter un aller-retour.
 
@@ -469,7 +469,7 @@ Chaque tâche suit la checklist du §6, les **règles impératives de l'interfac
 - **W13 Retrait VGT** : date de retrait, aperçu et impression de la carte ; cas VGT en jour, non en jour, non enregistrée (taxe).
 - **W14 SMS** : service d'envoi (opérateur à choisir avec le client), déclenché par les événements « moto retrouvée » et « paiement confirmé », en file d'attente, audité.
 - **M1 Contrôle d'une moto** : écran mobile de saisie du matricule et résultat (volée ou non, vignette à jour), à partir de l'endpoint de contrôle livré avec W11.
-- **M2 Informations (police)** : consultation des informations de W6 dans l'application. **Écran fait**, contre le contrat brouillon du §8 en mode maquette ; il passera à l'API réelle quand W6 sera fusionnée (Amadou valide le contrat d'abord).
+- **M2 Informations (police)** : consultation des informations de W6 dans l'application. **Fait**, contre le contrat réel du §8 (`GET /informations`, `image_urls`/`document_urls`, endpoint public) : W6 est fusionnée, plus de mode maquette pour cet écran en production.
 - **M4 Demande de VGT (population)** : demande de renouvellement après un premier enregistrement, choix de la mairie, paiement, suivi, **sans connexion** (D32).
 - **M5 Motos retrouvées et informations (population)** : consultation, **sans connexion** (D32).
 

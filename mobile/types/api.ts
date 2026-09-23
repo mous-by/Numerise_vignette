@@ -45,17 +45,18 @@ export interface Paginated<T> {
 }
 
 /**
- * Une information publiée par un commissaire (cahier §6 « Informations »). BROUILLON du contrat de W6 :
- * à valider par Amadou avant que l'endpoint existe (voir CLAUDE.md, §8).
+ * Une information publiée par un commissaire (cahier §6 « Informations »). Contrat W6 validé (voir CLAUDE.md, §8) :
+ * plusieurs images et plusieurs PDF par publication (glisser-déposer côté Web, au-delà du cahier qui n'en prévoit
+ * qu'un de chaque) — `image_urls`/`document_urls` sont toujours des tableaux, vides si aucune pièce de ce type.
  */
 export interface Information {
   id: number;
   commissaire_name: string;
   commissariat_name: string;
   description: string | null;
-  /** URL de l'image importée, ou null. */
-  image_url: string | null;
-  /** URL du fichier PDF importé, ou null. */
-  document_url: string | null;
+  /** URLs des images importées ; tableau vide si aucune. */
+  image_urls: string[];
+  /** URLs des fichiers PDF importés ; tableau vide si aucun. */
+  document_urls: string[];
   published_at: string;
 }
