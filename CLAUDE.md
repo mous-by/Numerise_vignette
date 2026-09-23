@@ -76,12 +76,15 @@ Cas d'usage : (1) enregistrement initial et acquisition de la VGT au commissaria
 
 Prérequis : PHP ≥ 8.3, Composer 2, MariaDB 10.4+ (ou MySQL 8), Node ≥ 20 (mobile seulement).
 
+Dans `php.ini` : `upload_max_filesize` et `post_max_size` par défaut (souvent 2M / 8M) sont trop bas pour le module Informations (W6, images jusqu'à 4 Mo, PDF jusqu'à 8 Mo, plusieurs par publication). Mettre au moins `upload_max_filesize = 10M` et `post_max_size = 50M`, puis redémarrer `php artisan serve` (le fichier n'est relu qu'au démarrage du processus). Sans ça, un fichier trop gros échoue silencieusement avant même d'atteindre la validation Laravel.
+
 ```sh
 composer install
 cp .env.example .env
 php artisan key:generate
 # créer deux bases vides (utf8mb4, utf8mb4_unicode_ci) : db_numerise_vignette et db_numerise_vignette_test
 php artisan migrate --seed      # rôles, permissions, superadmins déclarés dans .env
+php artisan storage:link        # fichiers publics des modules (images/PDF des informations, W6)
 php artisan serve               # crée aussi les superadmins manquants au lancement
 composer test                   # tests (base db_numerise_vignette_test, jamais la base de développement)
 ```
@@ -345,24 +348,30 @@ Tant que le mot de passe est **temporaire**, `password_change_required` vaut `tr
 | 422 `{"message","errors":{"phone":[…]}}` | Validation, ou identifiants refusés (un numéro inconnu et un mauvais mot de passe reçoivent le même message) |
 | 429 | Trop de tentatives, ou limitation |
 
-### Contrat des informations — BROUILLON (W6, consommé par M2 et M5)
+### Contrat des informations (W6, consommé par M2 et M5)
 
-Rédigé côté mobile d'après le cahier (§6 « Informations » et « Affichage »), **à valider par Amadou** : tant que W6 n'est pas fusionnée, aucun endpoint n'existe. L'application est déjà écrite contre ce contrat (mode maquette, §9).
+Statut : implémenté côté Web et API (branche `feature/w6-informations`, à valider par Moustapha en revue). Écran Web : le commissaire publie (description, images ou PDF — au moins un des trois), tous les rôles Web autorisés consultent (liste non cloisonnée par commissariat, publique par nature). Rédigé côté mobile d'après le cahier (§6 « Informations » et « Affichage ») ; l'application mobile est écrite contre ce contrat (mode maquette, §9) et passera à l'API réelle une fois la branche fusionnée.
+
+**⚠️ Changement par rapport à la première version de ce contrat** : le cahier ne prévoit qu'**une** image et **un** PDF par publication. `image_url`/`document_url` (singuliers) sont devenus `image_urls`/`document_urls` (**tableaux**, plusieurs pièces jointes de chaque, glisser-déposer côté Web) — PROPOSITION TECHNIQUE au-delà du cahier, À VALIDER AVEC LE CLIENT à terme, mais déjà implémentée des deux côtés (glisser-déposer Web + tableaux API) puisque rien n'est encore fusionné. **À signaler explicitement à Moustapha avant qu'il code l'affichage mobile contre ce contrat**, pour éviter un aller-retour.
 
 | Méthode | Route | Auth | Rôle |
 |---|---|---|---|
-| GET | `/informations?page=1` | **publique** (aucun jeton, D32) | Liste paginée, la plus récente d'abord ; lecture seule ; consommée par la police (M2) et la population (M5) |
+| GET | `/informations?page=1` | **publique** (aucun jeton, D32), `throttle:public` (30/min/IP) | Liste paginée, la plus récente d'abord ; lecture seule ; consommée par la police (M2) et la population (M5) |
 
 ```json
 { "data": [ { "id": 4, "commissaire_name": "…", "commissariat_name": "…", "description": "…",
-              "image_url": "https://…/image.jpg", "document_url": "https://…/document.pdf",
+              "image_urls": ["https://…/image-1.jpg", "https://…/image-2.jpg"],
+              "document_urls": ["https://…/document.pdf"],
               "published_at": "2026-09-21T10:00:00+00:00" } ],
   "meta": { "current_page": 1, "last_page": 2 } }
 ```
 
-- Champs du cahier : nom du commissaire, nom du commissariat, description, fichier PDF, image ; le cahier n'a **pas de titre**. `description`, `image_url` et `document_url` sont chacun optionnels (`null`) : « description **ou** fichier PDF **ou** image ». URL absolues, joignables depuis le téléphone.
-- `published_at` (tri, date affichée) et la pagination sont des PROPOSITIONS TECHNIQUES — À VALIDER.
-- Endpoint **public** : pas de jeton ni de permission, limitation par IP (429 au-delà), aucune donnée personnelle ; il renvoie les informations de **tous** les commissariats (le cahier dit « informations venant des différents commissariats »). Tant qu'il n'existe pas, l'application affiche « Les informations ne sont pas encore disponibles sur le serveur ».
+- `image_urls` et `document_urls` sont toujours présents, **tableaux vides** (`[]`) si aucune pièce jointe de ce type — jamais `null`, jamais absents. Plafonds serveur : 5 images, 3 PDF par publication (`Information::MAX_IMAGES` / `MAX_DOCUMENTS`, PROPOSITION TECHNIQUE).
+
+- Champs du cahier : nom du commissaire, nom du commissariat, description, fichier PDF, image ; le cahier n'a **pas de titre**. `description` est optionnelle (`null`) : « description **ou** fichiers PDF **ou** images » (au moins un des trois, imposé à la création comme à la modification, en comptant les pièces déjà enregistrées lors d'une suppression partielle). URL absolues (`Storage::disk('public')->url()`), joignables depuis le téléphone — nécessite `php artisan storage:link` (§3).
+- `published_at` (tri, date affichée ; réglé automatiquement à la publication) et la pagination restent des PROPOSITIONS TECHNIQUES.
+- Endpoint **public** : pas de jeton ni de permission, limitation par IP (limiteur nommé `public`, introduit avec W6 dans `AppServiceProvider`, réutilisable par les futures routes publiques — motos retrouvées, demande VGT), aucune donnée personnelle ; il renvoie les informations de **tous** les commissariats (le cahier dit « informations venant des différents commissariats »). Route en liste blanche du test d'architecture (`api.informations.index`).
+- Écran Web (`/informations`) : permissions `informations.view/create/update/delete` — défauts commissaire (tout), mairie et admin national (lecture seule, supervision). Modifier/supprimer réservé à l'auteur de son propre commissariat (propriété d'auteur, pas un plafond de rôle) ; la liste elle-même contourne volontairement le cloisonnement (`Information::acrossCommissariats()`) puisque ces données sont déjà publiques via l'API.
 
 ## 9. Application mobile (`mobile/`)
 
@@ -450,7 +459,7 @@ Chaque tâche suit la checklist du §6, les **règles impératives de l'interfac
 - **W3 Audit** (`audit.view`) : liste filtrable (auteur, module, action, dates, acteur superadmin) et détail **en modale** avec anciennes et nouvelles valeurs ; actions du superadmin signalées ; lecture seule. **Fait** (`AuditController`, `resources/views/audit/index.blade.php`, `tests/Feature/Audit/AuditScreenTest.php`).
 - **W4 Système** (`system.view`, `system.maintain`) : environnement, base, file d'attente, jobs échoués en lecture seule ; actions de maintenance sur liste blanche (vider le cache applicatif, vider les vues compilées), journalisées (`system.cache_cleared`, `system.views_cleared`) ; rien de destructeur. **Fait** (`SystemController`, `SystemStatus`, `resources/views/system/index.blade.php`, `tests/Feature/System/SystemScreenTest.php`). Aucun secret n'est affiché ; pour une tâche échouée, seule la première ligne de l'erreur.
 - **W5 Utilisateurs** (`users.*`) : liste (`User::visibleTo`), création par `UserProvisioningService::create` (mot de passe temporaire affiché **une seule fois**), modification, activer/désactiver, réinitialiser le mot de passe, révoquer sessions et jetons, suppression (soft), changement d'institution (admin national et superadmin), `UserPolicy` (plafond de rôle, D9 : le commissaire ne gère que sa police). Touche au service de comptes du socle. Une fois livrée, elle permet de créer les comptes police pour tester le mobile (en attendant : `tinker`, §9).
-- **W6 Informations** : le commissaire publie (description, fichier PDF, image), la mairie, la police et la population consultent (cahier §8, §9). Fournit l'endpoint de lecture consommé par M2 et M5, **public** (D32) : W6 introduit donc le limiteur par IP et l'entrée de la liste blanche du test d'architecture, à relire par les deux. Permissions à définir dans le manifeste (PROPOSITION TECHNIQUE — À VALIDER).
+- **W6 Informations** : le commissaire publie (description, PDF, image — plusieurs de chaque possible par glisser-déposer, PROPOSITION TECHNIQUE au-delà du cahier qui n'en prévoit qu'un de chaque, voir §8), la mairie, la police et la population consultent (cahier §8, §9). Fournit l'endpoint de lecture consommé par M2 et M5, **public** (D32) : W6 introduit donc le limiteur par IP et l'entrée de la liste blanche du test d'architecture, à relire par les deux. Permissions définies dans le manifeste `config/modules/informations.php`.
 - **W7 Propriétaires** : fiche (nom, prénom, genre, adresse, téléphone identifié à son nom, contact en cas d'urgence), liste, recherche, modification, suppression ; cloisonné par commissariat.
 - **W8 Motos** : matricule (identifiant unique national, jamais de châssis — résolu directement à partir du cahier), couleur, genre ou marque, année de la VGT ; attestation de vente (vendeur, témoin si besoin, chacun un seul enregistrement comme la maquette du cahier) ; lien avec le propriétaire (du même commissariat) ; liste, recherche, modification, suppression. **Fait** (`MotoController`, `resources/views/motos/index.blade.php`, `tests/Feature/Motos/MotoScreenTest.php`).
 - **W9 Déclarations** : vol, braquage ou autre (lieu, date, circonstances), liée à une moto du commissariat ; l'identité de la victime n'est pas ressaisie (PROPOSITION TECHNIQUE — déjà portée par `Moto::proprietaire`, le cahier la duplique dans sa maquette). Une déclaration de vol ou de braquage marque la moto liée « Volée » (`Moto::recalculateStolenStatus()`, colonne `motos.is_stolen`, recalculée après création, modification et suppression) ; « autre » ne la marque pas. Base consultable nationalement par tous les agents à travers le futur endpoint de contrôle (W11), pas par cet écran (cloisonné par commissariat comme W7/W8). **Fait** (`DeclarationController`, `resources/views/declarations/index.blade.php`, `tests/Feature/Declarations/DeclarationScreenTest.php`).
