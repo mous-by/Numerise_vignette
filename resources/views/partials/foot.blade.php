@@ -51,5 +51,26 @@
                 dropdownParent: modal.length ? modal : $(document.body),
             });
         });
+
+        // Select2 en recherche côté serveur (AJAX) : pour un champ dont la liste complète serait trop lourde à
+        // précharger (propriétaire, moto…). `data-search-url` répond en JSON `{"results": [{"id", "text"}]}`.
+        $('.ajax-select').each(function () {
+            const modal = $(this).closest('.modal');
+            $(this).select2({
+                theme: 'bootstrap4',
+                allowClear: false,
+                dropdownParent: modal.length ? modal : $(document.body),
+                placeholder: $(this).data('placeholder') || 'Rechercher…',
+                minimumInputLength: 0,
+                ajax: {
+                    url: $(this).data('search-url'),
+                    dataType: 'json',
+                    delay: 250,
+                    data: (params) => ({ q: params.term || '' }),
+                    processResults: (data) => ({ results: data.results }),
+                    cache: true,
+                },
+            });
+        });
     });
 </script>

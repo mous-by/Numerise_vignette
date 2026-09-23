@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Web\StoreProprietaireRequest;
 use App\Http\Requests\Web\UpdateProprietaireRequest;
 use App\Models\Proprietaire;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
@@ -24,6 +26,29 @@ class ProprietaireController extends Controller
         return view('proprietaires.index', [
             'proprietaires' => Proprietaire::orderBy('last_name')->orderBy('first_name')->get(),
         ]);
+    }
+
+    /**
+     * Recherche pour les champs Select2 « + Nouveau » d'un autre écran (Motos, W8) : commissariat trop peuplé
+     * pour tout charger dans le select. Format attendu par Select2 : `{"results": [{"id", "text"}, ...]}`.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        Gate::authorize('viewAny', Proprietaire::class);
+
+        $term = trim((string) $request->query('q', ''));
+
+        $proprietaires = Proprietaire::query()
+            ->when($term !== '', fn ($query) => $query->where(fn ($q) => $q
+                ->where('first_name', 'like', "%{$term}%")
+                ->orWhere('last_name', 'like', "%{$term}%")
+            ))
+            ->orderBy('last_name')->orderBy('first_name')
+            ->limit(20)
+            ->get()
+            ->map(fn (Proprietaire $proprietaire) => ['id' => $proprietaire->id, 'text' => $proprietaire->fullName()]);
+
+        return response()->json(['results' => $proprietaires]);
     }
 
     public function store(StoreProprietaireRequest $request): RedirectResponse
