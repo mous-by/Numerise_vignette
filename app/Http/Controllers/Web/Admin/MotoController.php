@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Web\StoreMotoRequest;
 use App\Http\Requests\Web\UpdateMotoRequest;
 use App\Models\Moto;
+use App\Models\MotoRetrouvee;
 use App\Models\Proprietaire;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -43,6 +44,29 @@ class MotoController extends Controller
         $term = trim((string) $request->query('q', ''));
 
         $motos = Moto::with('proprietaire')
+            ->when($term !== '', fn ($query) => $query->where('plate_number', 'like', "%{$term}%"))
+            ->orderBy('plate_number')
+            ->limit(20)
+            ->get()
+            ->map(fn (Moto $moto) => ['id' => $moto->id, 'text' => "{$moto->plate_number} — {$moto->proprietaire->fullName()}"]);
+
+        return response()->json(['results' => $motos]);
+    }
+
+    /**
+     * Recherche nationale des motos actuellement volées, pour le select Moto de l'écran Motos retrouvées (W10,
+     * §4.7 acrossCommissariats — une moto volée peut être retrouvée dans un autre commissariat que le sien).
+     * Format attendu par Select2 : `{"results": [{"id", "text"}, ...]}`.
+     */
+    public function searchStolen(Request $request): JsonResponse
+    {
+        Gate::authorize('create', MotoRetrouvee::class);
+
+        $term = trim((string) $request->query('q', ''));
+
+        $motos = Moto::query()->acrossCommissariats()
+            ->with(['proprietaire' => fn ($query) => $query->acrossCommissariats()])
+            ->where('is_stolen', true)
             ->when($term !== '', fn ($query) => $query->where('plate_number', 'like', "%{$term}%"))
             ->orderBy('plate_number')
             ->limit(20)
