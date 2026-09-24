@@ -264,4 +264,17 @@ class UserScreenTest extends TestCase
 
         $this->assertNotSoftDeleted($this->superadmin);
     }
+
+    public function test_the_list_shows_role_chips_and_a_sheet_per_user_without_secrets(): void
+    {
+        $chef = User::factory()->commissaire()->create();
+        $police = User::factory()->police()->create(['commissariat_id' => $chef->commissariat_id, 'name' => 'Agent Fiche']);
+
+        $this->actingAs($chef)->get('/users')->assertOk()
+            ->assertSee('users-filter', false)
+            ->assertSee('data-token="role-police"', false)
+            ->assertSee('ficheUser-'.$police->id, false)
+            ->assertSee('Agent Fiche')
+            ->assertDontSee($police->password);
+    }
 }
