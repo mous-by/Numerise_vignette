@@ -24,7 +24,7 @@ class ProprietaireController extends Controller
         Gate::authorize('viewAny', Proprietaire::class);
 
         return view('proprietaires.index', [
-            'proprietaires' => Proprietaire::orderBy('last_name')->orderBy('first_name')->get(),
+            'proprietaires' => Proprietaire::with('motos')->orderBy('last_name')->orderBy('first_name')->get(),
         ]);
     }
 

@@ -27,27 +27,51 @@
             @endcan
         </div>
         <div class="card-body">
+            @php
+                $withMoto = $proprietaires->filter(fn ($p) => $p->motos->isNotEmpty())->count();
+                $withStolen = $proprietaires->filter(fn ($p) => $p->motos->contains('is_stolen', true))->count();
+            @endphp
+            <div class="nv-chips mb-3" id="proprietaires-filter">
+                <button type="button" class="nv-chip active" data-token="">Tous <b>{{ $proprietaires->count() }}</b></button>
+                <button type="button" class="nv-chip" data-token="avec-moto">Avec moto <b>{{ $withMoto }}</b></button>
+                <button type="button" class="nv-chip" data-token="sans-moto">Sans moto <b>{{ $proprietaires->count() - $withMoto }}</b></button>
+                <button type="button" class="nv-chip" data-token="moto-volee">Moto volée <b>{{ $withStolen }}</b></button>
+            </div>
             <div class="table-responsive">
                 <table class="table" id="proprietaires-table">
                     <thead>
                         <tr>
-                            <th>NOM</th>
-                            <th>GENRE</th>
+                            <th>PROPRIÉTAIRE</th>
+                            <th>CONTACT</th>
                             <th>ADRESSE</th>
-                            <th>TÉLÉPHONE</th>
-                            <th>CONTACT URGENCE</th>
-                            <th width="10%">ACTIONS</th>
+                            <th>MOTOS</th>
+                            <th width="12%">ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($proprietaires as $proprietaire)
                             <tr>
-                                <td class="fw-semibold">{{ $proprietaire->fullName() }}</td>
-                                <td>{{ $proprietaire->gender->label() }}</td>
+                                <td>
+                                    <div class="fw-semibold">{{ $proprietaire->fullName() }}</div>
+                                    <div class="small text-muted">{{ $proprietaire->gender->label() }}</div>
+                                </td>
+                                <td>
+                                    <div>{{ $proprietaire->phone }}</div>
+                                    <div class="small text-muted">Urgence : {{ $proprietaire->emergency_contact ?? '—' }}</div>
+                                </td>
                                 <td class="cell-wrap text-break">{{ $proprietaire->address }}</td>
-                                <td>{{ $proprietaire->phone }}</td>
-                                <td>{{ $proprietaire->emergency_contact ?? '—' }}</td>
+                                <td>
+                                    <span class="d-none">{{ $proprietaire->motos->isNotEmpty() ? 'avec-moto' : 'sans-moto' }}{{ $proprietaire->motos->contains('is_stolen', true) ? ' moto-volee' : '' }}</span>
+                                    @forelse ($proprietaire->motos as $moto)
+                                        <span class="badge {{ $moto->is_stolen ? 'bg-danger-subtle' : 'bg-primary-subtle' }}" title="{{ $moto->is_stolen ? 'Déclarée volée' : ($moto->isVgtCurrent() ? 'Vignette à jour' : 'Vignette à renouveler') }}">{{ $moto->plate_number }}</span>
+                                    @empty
+                                        <span class="text-muted small">Aucune</span>
+                                    @endforelse
+                                </td>
                                 <td class="d-flex gap-1">
+                                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#ficheProprietaire-{{ $proprietaire->id }}" title="Fiche du propriétaire">
+                                        <i class='bx bx-show'></i>
+                                    </button>
                                     @can('update', $proprietaire)
                                         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editProprietaire-{{ $proprietaire->id }}" title="Modifier">
                                             <i class='bx bx-edit'></i>
@@ -71,6 +95,9 @@
         </div>
     </div>
 
+    @foreach ($proprietaires as $proprietaire)
+        @include('proprietaires._fiche', ['proprietaire' => $proprietaire])
+    @endforeach
     @can('create', \App\Models\Proprietaire::class)
         <div class="modal fade" id="createProprietaireModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
@@ -211,7 +238,15 @@
 
 @push('scripts')
     <script>
-        $('#proprietaires-table').DataTable({ scrollX: false });
+        const proprietairesTable = $('#proprietaires-table').DataTable({ scrollX: false });
+
+        // Filtre par pastille : le jeton (avec-moto, sans-moto, moto-volee) est caché dans la colonne « Motos ».
+        document.querySelectorAll('#proprietaires-filter .nv-chip').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('#proprietaires-filter .nv-chip').forEach((other) => other.classList.toggle('active', other === chip));
+                proprietairesTable.column(3).search(chip.dataset.token || '', false, true).draw();
+            });
+        });
 
         $(document).on('submit', '.js-delete-proprietaire', function (event) {
             event.preventDefault();

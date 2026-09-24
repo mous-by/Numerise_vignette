@@ -4,6 +4,7 @@ namespace Tests\Feature\Proprietaires;
 
 use App\Models\ActivityLog;
 use App\Models\Commissariat;
+use App\Models\Moto;
 use App\Models\Proprietaire;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -174,5 +175,39 @@ class ProprietaireScreenTest extends TestCase
         ])->assertRedirect('/proprietaires')->assertSessionHas('error');
 
         $this->assertSame(0, Proprietaire::count());
+    }
+
+    public function test_the_list_groups_contacts_and_shows_each_owners_motos_with_filters(): void
+    {
+        $chef = User::factory()->commissaire()->create();
+        $withMoto = Proprietaire::factory()->create(['commissariat_id' => $chef->commissariat_id, 'first_name' => 'Awa', 'last_name' => 'Traore', 'emergency_contact' => '+22370009999']);
+        Proprietaire::factory()->create(['commissariat_id' => $chef->commissariat_id, 'first_name' => 'Issa', 'last_name' => 'Keita']);
+        $moto = Moto::factory()->create(['commissariat_id' => $chef->commissariat_id, 'proprietaire_id' => $withMoto->id, 'plate_number' => 'AB 1234 CD']);
+        $moto->forceFill(['is_stolen' => true])->save();
+
+        $this->actingAs($chef)->get('/proprietaires')->assertOk()
+            ->assertSee('Urgence : +22370009999')
+            ->assertSee('AB 1234 CD')
+            ->assertSee('proprietaires-filter', false)
+            ->assertSee('data-token="moto-volee"', false)
+            ->assertSee('ficheProprietaire-'.$withMoto->id, false)
+            ->assertSee('Déclarée volée')
+            ->assertSee('Aucune moto enregistrée pour ce propriétaire.');
+    }
+
+    public function test_the_owner_sheet_lists_only_the_owners_own_motos(): void
+    {
+        $chef = User::factory()->commissaire()->create();
+        $owner = Proprietaire::factory()->create(['commissariat_id' => $chef->commissariat_id]);
+        $other = Proprietaire::factory()->create(['commissariat_id' => $chef->commissariat_id]);
+        Moto::factory()->create(['commissariat_id' => $chef->commissariat_id, 'proprietaire_id' => $owner->id, 'plate_number' => 'ZZ 1111 ZZ']);
+        Moto::factory()->create(['commissariat_id' => $chef->commissariat_id, 'proprietaire_id' => $other->id, 'plate_number' => 'YY 2222 YY']);
+
+        $page = $this->actingAs($chef)->get('/proprietaires')->getContent();
+        $sheet = substr($page, strpos($page, 'id="ficheProprietaire-'.$owner->id.'"'));
+        $sheet = substr($sheet, 0, strpos($sheet, 'modal-footer'));
+
+        $this->assertStringContainsString('ZZ 1111 ZZ', $sheet);
+        $this->assertStringNotContainsString('YY 2222 YY', $sheet);
     }
 }

@@ -9,6 +9,7 @@ use Database\Factories\ProprietaireFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -25,6 +26,12 @@ class Proprietaire extends Model
     protected function casts(): array
     {
         return ['gender' => Genre::class];
+    }
+
+    /** @return HasMany<Moto, $this> */
+    public function motos(): HasMany
+    {
+        return $this->hasMany(Moto::class);
     }
 
     public function fullName(): string
