@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
 
 /**
  * Réglage du modèle de carte VGT par mairie (W13, App\Enums\VgtCardTemplate). PROPOSITION TECHNIQUE — le cahier
- * ne décrit aucun visuel : voir CLAUDE.md §5. Pas d'écran Mairies dédié (W2, pas encore construit) : ce réglage
+ * ne décrit aucun visuel : voir CLAUDE.md §5. L'écran Mairies (W2) gère le CRUD des mairies ; ce réglage
  * reste, comme les tarifs (W12), une petite gestion intégrée à l'écran Demandes VGT, gardée par `mairies.update`
  * (permission déjà du manifeste `mairies`, pas une nouvelle permission).
  */

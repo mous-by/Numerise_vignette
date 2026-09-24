@@ -85,7 +85,7 @@ class DashboardBusinessTest extends TestCase
         DemandeVgt::factory()->create(['commissariat_id' => $chef->commissariat_id, 'status' => 'payee']); // pas une tâche du commissaire
 
         $this->actingAs($chef)->get('/')->assertOk()
-            ->assertSeeInOrder(['Registre motos', 'Demandes VGT', 'Bientôt disponible', 'Modules à venir'])
+            ->assertSeeInOrder(['Registre motos', 'Demandes VGT'])
             ->assertSee('nv-badge', false)->assertSee('title="3 à traiter"', false);
     }
 
