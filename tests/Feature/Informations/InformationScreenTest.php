@@ -219,4 +219,16 @@ class InformationScreenTest extends TestCase
 
         $this->assertSame(0, Information::acrossCommissariats()->count());
     }
+
+    public function test_the_list_shows_piece_chips_and_a_sheet_per_information(): void
+    {
+        $information = Information::factory()->create(['description' => 'Avis de recherche complet']);
+        $agent = User::factory()->mairie()->create();
+
+        $this->actingAs($agent)->get('/informations')->assertOk()
+            ->assertSee('informations-filter', false)
+            ->assertSee('data-token="avec-pdf"', false)
+            ->assertSee('ficheInformation-'.$information->id, false)
+            ->assertSee('Avis de recherche complet');
+    }
 }
