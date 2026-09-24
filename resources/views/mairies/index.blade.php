@@ -32,6 +32,12 @@
             @endcan
         </div>
         <div class="card-body">
+            @php($inactiveCount = $mairies->where('is_active', false)->count())
+            <div class="nv-chips mb-3" id="mairies-filter">
+                <button type="button" class="nv-chip active" data-token="">Toutes <b>{{ $mairies->count() }}</b></button>
+                <button type="button" class="nv-chip" data-token="etat-actif">Actives <b>{{ $mairies->count() - $inactiveCount }}</b></button>
+                <button type="button" class="nv-chip" data-token="etat-inactif">Inactives <b>{{ $inactiveCount }}</b></button>
+            </div>
             <div class="table-responsive">
                 <table class="table" id="mairies-table">
                     <thead>
@@ -50,10 +56,11 @@
                                 <td>{{ $mairie->code ?? '—' }}</td>
                                 <td>{{ $mairie->users_count }}</td>
                                 <td>
+                                    <span class="d-none">{{ $mairie->is_active ? 'etat-actif' : 'etat-inactif' }}</span>
                                     @if ($mairie->is_active)
-                                        <span class="badge bg-success">Actif</span>
+                                        <span class="badge bg-success-subtle">Actif</span>
                                     @else
-                                        <span class="badge bg-secondary">Inactif</span>
+                                        <span class="badge bg-secondary-subtle">Inactif</span>
                                     @endif
                                 </td>
                                 <td class="d-flex gap-1">
@@ -199,7 +206,14 @@
 
 @push('scripts')
     <script>
-        $('#mairies-table').DataTable({ scrollX: false });
+        const mairiesTable = $('#mairies-table').DataTable({ scrollX: false });
+
+        document.querySelectorAll('#mairies-filter .nv-chip').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('#mairies-filter .nv-chip').forEach((other) => other.classList.toggle('active', other === chip));
+                mairiesTable.column(3).search(chip.dataset.token || '', false, true).draw();
+            });
+        });
 
         $(document).on('submit', '.js-delete-mairie', function (event) {
             event.preventDefault();

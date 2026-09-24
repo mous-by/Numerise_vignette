@@ -170,4 +170,11 @@ class CommissariatScreenTest extends TestCase
         // cache avec l'état actif d'avant la désactivation (un vrai utilisateur, lui, revient toujours en base).
         $this->actingAs($chef->fresh())->get('/')->assertRedirect('/login');
     }
+
+    public function test_the_list_offers_status_chips(): void
+    {
+        $this->actingAs($this->adminNational)->get('/commissariats')->assertOk()
+            ->assertSee('commissariats-filter', false)
+            ->assertSee('data-token="etat-inactif"', false);
+    }
 }
