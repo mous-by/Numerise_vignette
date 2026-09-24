@@ -198,4 +198,18 @@ class MotoRetrouveeScreenTest extends TestCase
         // 404 : le cloisonnement fail-closed bloque même la résolution de la route (§4.7).
         $this->actingAs($chef)->put("/motos-retrouvees/{$motoRetrouvee->id}", ['location' => 'X'])->assertNotFound();
     }
+
+    public function test_the_list_shows_status_chips_and_a_sheet_per_find(): void
+    {
+        $chef = User::factory()->commissaire()->create();
+        $owner = Proprietaire::factory()->create(['commissariat_id' => $chef->commissariat_id]);
+        $moto = Moto::factory()->create(['commissariat_id' => $chef->commissariat_id, 'proprietaire_id' => $owner->id]);
+        $find = MotoRetrouvee::factory()->create(['commissariat_id' => $chef->commissariat_id, 'moto_id' => $moto->id, 'location' => 'Pont des Martyrs']);
+
+        $this->actingAs($chef)->get('/motos-retrouvees')->assertOk()
+            ->assertSee('motos-retrouvees-filter', false)
+            ->assertSee('data-token="recuperee"', false)
+            ->assertSee('ficheMotoRetrouvee-'.$find->id, false)
+            ->assertSee('Pont des Martyrs');
+    }
 }

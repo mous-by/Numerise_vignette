@@ -27,33 +27,52 @@
             @endcan
         </div>
         <div class="card-body">
+            @php
+                $recoveredCount = $motosRetrouvees->where('recovered', true)->count();
+            @endphp
+            <div class="nv-chips mb-3" id="motos-retrouvees-filter">
+                <button type="button" class="nv-chip active" data-token="">Toutes <b>{{ $motosRetrouvees->count() }}</b></button>
+                <button type="button" class="nv-chip" data-token="en-attente">En attente de récupération <b>{{ $motosRetrouvees->count() - $recoveredCount }}</b></button>
+                <button type="button" class="nv-chip" data-token="recuperee">Récupérées <b>{{ $recoveredCount }}</b></button>
+            </div>
             <div class="table-responsive">
                 <table class="table" id="motos-retrouvees-table">
                     <thead>
                         <tr>
-                            <th>DATE D'ARRÊT</th>
-                            <th>MATRICULE</th>
+                            <th>MOTO</th>
                             <th>PROPRIÉTAIRE</th>
-                            <th>LIEU</th>
+                            <th>ARRÊT</th>
                             <th>STATUT</th>
-                            <th width="10%">ACTIONS</th>
+                            <th width="12%">ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($motosRetrouvees as $motoRetrouvee)
                             <tr>
-                                <td>{{ $motoRetrouvee->found_at->format('d/m/Y') }}</td>
-                                <td class="fw-semibold">{{ $motoRetrouvee->moto->plate_number }}</td>
-                                <td>{{ $motoRetrouvee->moto->proprietaire->fullName() }}</td>
-                                <td class="cell-wrap text-break">{{ $motoRetrouvee->location }}</td>
                                 <td>
-                                    @if ($motoRetrouvee->recovered)
-                                        <span class="badge bg-success-subtle text-success">Récupérée le {{ $motoRetrouvee->recovered_at->format('d/m/Y') }}</span>
-                                    @else
-                                        <span class="badge bg-light text-dark">En attente</span>
-                                    @endif
+                                    <div class="fw-semibold">{{ $motoRetrouvee->moto->plate_number }}</div>
+                                    <div class="small text-muted">{{ $motoRetrouvee->moto->type_or_brand }} · {{ $motoRetrouvee->moto->color }}</div>
                                 </td>
                                 <td>
+                                    <div>{{ $motoRetrouvee->moto->proprietaire->fullName() }}</div>
+                                    <div class="small text-muted">{{ $motoRetrouvee->moto->proprietaire->phone }}</div>
+                                </td>
+                                <td data-order="{{ $motoRetrouvee->found_at->format('Y-m-d') }}" class="cell-wrap text-break">
+                                    <div>{{ $motoRetrouvee->location }}</div>
+                                    <div class="small text-muted">{{ $motoRetrouvee->found_at->format('d/m/Y') }}</div>
+                                </td>
+                                <td>
+                                    <span class="d-none">{{ $motoRetrouvee->recovered ? 'recuperee' : 'en-attente' }}</span>
+                                    @if ($motoRetrouvee->recovered)
+                                        <span class="badge bg-success-subtle">Récupérée le {{ $motoRetrouvee->recovered_at->format('d/m/Y') }}</span>
+                                    @else
+                                        <span class="badge bg-warning-subtle">En attente</span>
+                                    @endif
+                                </td>
+                                <td class="d-flex gap-1">
+                                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#ficheMotoRetrouvee-{{ $motoRetrouvee->id }}" title="Fiche">
+                                        <i class='bx bx-show'></i>
+                                    </button>
                                     @can('update', $motoRetrouvee)
                                         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editMotoRetrouvee-{{ $motoRetrouvee->id }}" title="Modifier">
                                             <i class='bx bx-edit'></i>
@@ -68,6 +87,9 @@
         </div>
     </div>
 
+    @foreach ($motosRetrouvees as $motoRetrouvee)
+        @include('motos-retrouvees._fiche', ['motoRetrouvee' => $motoRetrouvee])
+    @endforeach
     @can('create', \App\Models\MotoRetrouvee::class)
         @php($createFailed = $errors->any() && ! old('moto_retrouvee_id'))
         <div class="modal fade" id="createMotoRetrouveeModal" tabindex="-1" aria-hidden="true">
@@ -115,7 +137,14 @@
 
 @push('scripts')
     <script>
-        $('#motos-retrouvees-table').DataTable({ scrollX: false, order: [[0, 'desc']] });
+        const motosRetrouveesTable = $('#motos-retrouvees-table').DataTable({ scrollX: false, order: [[2, 'desc']] });
+
+        document.querySelectorAll('#motos-retrouvees-filter .nv-chip').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('#motos-retrouvees-filter .nv-chip').forEach((other) => other.classList.toggle('active', other === chip));
+                motosRetrouveesTable.column(3).search(chip.dataset.token || '', false, true).draw();
+            });
+        });
 
         function toggleRecoveredField(suffix) {
             const box = document.getElementById('recovered' + suffix);
