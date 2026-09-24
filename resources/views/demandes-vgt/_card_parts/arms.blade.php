@@ -1,0 +1,2 @@
+{{-- Logo de la commune : image téléversée par la mairie (`mairies.logo_path`), sinon l'image par défaut : les armoiries reproduites d'après une vraie vignette du District de Bamako (public/assets/images/vignette/arms-<variante>.png, fond détouré ; variantes bamako, 2023, 2018). Chaque mairie remplace ce défaut par son propre logo. --}}
+<img class="{{ $class ?? '' }}" src="{{ $demande->mairie->logoUrl() ?? asset('assets/images/vignette/arms-'.($variant ?? 'bamako').'.png') }}" alt="Logo" style="object-fit:contain">

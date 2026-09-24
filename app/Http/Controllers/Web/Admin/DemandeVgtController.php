@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Web\Admin;
 
+use App\Enums\DemandeVgtStatus;
+use App\Enums\VgtCardTemplate;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Web\ConfirmPaiementRequest;
 use App\Http\Requests\Web\ConfirmRetraitRequest;
@@ -13,6 +15,7 @@ use App\Models\Mairie;
 use App\Models\Moto;
 use App\Models\TarifVgt;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
@@ -40,6 +43,25 @@ class DemandeVgtController extends Controller
             'hasMotos' => Moto::query()->exists(),
             'tarifs' => Gate::allows('manageTarifs', DemandeVgt::class) ? TarifVgt::orderBy('type_or_brand')->get() : collect(),
         ]);
+    }
+
+    /**
+     * Carte VGT imprimable (W13) dans le modèle demandé : aperçu et impression au choix de la mairie. Réservée
+     * aux demandes payées ou retirées, visibles de l'utilisateur (cloisonnement, comme index()).
+     */
+    public function card(Request $request, int $demandeId, string $template): View
+    {
+        Gate::authorize('viewAny', DemandeVgt::class);
+
+        $model = VgtCardTemplate::tryFrom($template) ?? abort(404);
+        $demande = DemandeVgt::visibleTo($request->user())
+            ->with(['moto' => fn ($query) => $query->with(['proprietaire' => fn ($q) => $q->acrossCommissariats()]), 'commissariat', 'mairie'])
+            ->findOrFail($demandeId);
+        abort_unless(in_array($demande->status, [DemandeVgtStatus::Payee, DemandeVgtStatus::Retiree], true), 404);
+
+        $face = in_array($request->query('face'), ['recto', 'verso'], true) ? $request->query('face') : 'both';
+
+        return view('demandes-vgt.card', ['demande' => $demande, 'template' => $model, 'face' => $face, 'preview' => $request->boolean('preview')]);
     }
 
     public function store(StoreDemandeVgtRequest $request): RedirectResponse
