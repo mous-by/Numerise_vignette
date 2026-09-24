@@ -7,7 +7,7 @@
     $issuer = mb_strtoupper($demande->mairie->name);
     $genre = mb_strtoupper($moto->type_or_brand);
     $digits = str_split((string) $demande->vgt_year);
-    $qrText = $serial.' '.$moto->plate_number;
+    $qrText = app(\App\Services\Vgt\VignetteVerifier::class)->url($demande);
 @endphp
 <style>
   .vc{width:85.6mm;height:54mm;box-sizing:border-box;position:relative;overflow:hidden;page-break-after:always;break-after:page;font-family:Arial,Helvetica,sans-serif;line-height:1.2;border-radius:3mm}
