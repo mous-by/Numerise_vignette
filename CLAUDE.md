@@ -189,7 +189,7 @@ Middleware : `active` (compte ET institution actifs), `channel:web|api`, `passwo
 
 ### 4.9 API et Sanctum
 
-Préfixe `/api/v1`, JSON uniquement, sans session ni CSRF, un fichier par module dans `routes/api/v1/*.php`. Pile d'une route : `auth:sanctum` → `active` → `channel:api` → `throttle:api`. Sanctum : Bearer seulement (`guard` vidé, `stateful` vide, `/sanctum/csrf-cookie` désactivé), jeton par appareil, 30 jours (`SANCTUM_TOKEN_EXPIRATION`, minutes). Compatibilité Sanctum + Spatie testée. **Routes publiques (D32)** : la population n'ayant pas de compte, certains endpoints de lecture (informations, motos retrouvées) et la demande de VGT sont **sans jeton** ; ils sont limités par IP (limiteur dédié, à ajouter au socle avec W6), ne renvoient aucune donnée personnelle, et figurent dans la liste blanche du test d'architecture « toute route est protégée » (aujourd'hui : santé et connexion). Contrat complet : §8.
+Préfixe `/api/v1`, JSON uniquement, sans session ni CSRF, un fichier par module dans `routes/api/v1/*.php`. Pile d'une route : `auth:sanctum` → `active` → `channel:api` → `throttle:api`. Sanctum : Bearer seulement (`guard` vidé, `stateful` vide, `/sanctum/csrf-cookie` désactivé), jeton par appareil, 30 jours (`SANCTUM_TOKEN_EXPIRATION`, minutes). Compatibilité Sanctum + Spatie testée. **Routes publiques (D32)** : la population n'ayant pas de compte, certains endpoints de lecture (informations, motos retrouvées) et la demande de VGT sont **sans jeton** ; ils sont limités par IP (limiteur dédié, à ajouter au socle avec W6), ne renvoient aucune donnée personnelle, et figurent dans la liste blanche du test d'architecture « toute route est protégée » (aujourd'hui : santé, connexion, informations, motos retrouvées, mairies, demande de VGT et suivi). Contrat complet : §8.
 
 ### 4.10 Arborescence
 
@@ -385,6 +385,41 @@ Statut : **fusionné et en service** (Web, API, mobile). Écran Web : le commiss
 - Endpoint **public** : pas de jeton ni de permission, limitation par IP (limiteur nommé `public`, introduit avec W6 dans `AppServiceProvider`, réutilisable par les futures routes publiques — motos retrouvées, demande VGT), aucune donnée personnelle ; il renvoie les informations de **tous** les commissariats (le cahier dit « informations venant des différents commissariats »). Route en liste blanche du test d'architecture (`api.informations.index`).
 - Écran Web (`/informations`) : permissions `informations.view/create/update/delete` — défauts commissaire (tout), mairie et admin national (lecture seule, supervision). Modifier/supprimer réservé à l'auteur de son propre commissariat (propriété d'auteur, pas un plafond de rôle) ; la liste elle-même contourne volontairement le cloisonnement (`Information::acrossCommissariats()`) puisque ces données sont déjà publiques via l'API.
 
+### Contrat de la population — routes publiques (D32, consommé par M4 et M5)
+
+Statut : implémenté et testé (`tests/Feature/Api/PublicPopulationApiTest.php`) ; **à valider par Moustapha** avant que M4 et M5 passent du mode maquette à l'API réelle. La population n'a pas de compte : aucune de ces routes ne demande de jeton. Lecture limitée à 30 requêtes par minute et par IP (`throttle:public`) ; écriture et suivi limités à **6 par minute et par IP, et 10 par heure et par matricule** (`throttle:public-write`, contre le devinage du téléphone). Aucune donnée personnelle du propriétaire n'est jamais renvoyée. Codes 429 au-delà.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/motos-retrouvees?page=1` | Motos retrouvées **non encore récupérées**, la plus récente d'abord (M5) |
+| GET | `/mairies` | Mairies actives, pour choisir la mairie de retrait (M4) |
+| POST | `/demandes-vgt` | Demande de VGT d'un propriétaire, sans compte (M4) |
+| POST | `/demandes-vgt/suivi` | Statut des demandes d'une moto (M4) |
+
+```json
+// GET /motos-retrouvees
+{ "data": [ { "id": 3, "matricule": "AB 1234 CD", "genre": "Sanili", "couleur": "Noire", "lieu": "Pont des Martyrs",
+              "date_arret": "2026-09-20", "commissariat": "Commissariat du 1er Arrondissement" } ],
+  "meta": { "current_page": 1, "last_page": 1 } }
+
+// GET /mairies
+{ "data": [ { "id": 1, "nom": "Mairie de la Commune III" } ] }
+
+// POST /demandes-vgt   corps : { "matricule": "AB 1234 CD", "phone": "70 00 12 34", "mairie_id": 1, "vgt_year": 2026 }   → 201
+{ "data": { "reference": "VGT-2026-000004", "annee": 2026, "statut": { "code": "en_attente", "libelle": "En attente" },
+            "motif_rejet": null, "montant": { "base": 6000, "majoration": 0, "total": 6000 },
+            "mairie": { "id": 1, "nom": "Mairie de la Commune III" }, "paiement_confirme_le": null, "retrait_le": null,
+            "cree_le": "2026-09-30T10:00:00+00:00" } }
+
+// POST /demandes-vgt/suivi   corps : { "matricule": "AB 1234 CD", "phone": "70 00 12 34" }   → 200
+{ "matricule": "AB 1234 CD", "vgt_a_jour": false, "data": [ { …même forme que ci-dessus, 20 demandes au plus… } ] }
+```
+
+- **Identification (PROPOSITION TECHNIQUE — À VALIDER AVEC LE CLIENT)** : le propriétaire s'identifie par le **matricule** de sa moto et le **téléphone enregistré** à son nom au commissariat (`App\Services\Vgt\PublicOwnerIdentifier`). Un matricule inconnu et un mauvais numéro renvoient **la même réponse** (`422`, « Aucune moto ne correspond à ce matricule et à ce numéro de téléphone. ») pour ne rien révéler sur les motos enregistrées. Le cahier (§8) parle d'un SMS de confirmation : le code reçu par SMS viendra avec W14 et pourra renforcer cette identification.
+- **Règles de la demande** : une moto enregistrée (W8) ; `vgt_year` supérieure à l'année déjà couverte par la moto (`422` sinon) et au plus l'année prochaine ; une seule demande en cours par moto et par année (`409`) ; tarif et majoration comme au commissariat (`App\Services\Vgt\DemandeVgtPricing`, partagé avec l'écran Web). La demande est rattachée au commissariat de la moto, puis suit le même parcours que celle du commissaire : validation, paiement et retrait à la mairie choisie. Le paiement n'est pas fait dans l'API (confirmé par la mairie, W12).
+- **Audit** : la création est journalisée (`demandes-vgt.created`, canal `api`, sans utilisateur).
+- Validation : `422 {"message","errors":{...}}` comme le reste de l'API.
+
 ### Contrat du contrôle de police (W11, consommé par M1)
 
 Statut : implémenté et testé (`tests/Feature/Api/ControleApiTest.php`).
@@ -474,8 +509,8 @@ Authentification Web et API, rôles, permissions à deux voies, audit, cloisonne
 | W14 | Module **SMS** | 3 | W10, W12 | opérateur, langue, contenu | Amadou |
 | M1 | Mobile police : **contrôle d'une moto** | 4 | endpoint livré avec W11 (fait, §8) | non (résolu avec W13, §5) | Moustapha |
 | M2 | Mobile police : **informations** | 1 | API de W6 | non | Moustapha |
-| M4 | Mobile population : **demande de VGT** et suivi (sans compte) | 3 | API publique de W11, W12 (pas encore livrée : W11 n'a construit que les écrans Web commissaire/mairie et l'endpoint de contrôle police, pas de route publique D32) | identification sans compte | Moustapha |
-| M5 | Mobile population : **motos retrouvées** et informations (sans compte) | 2 | API publique de W10, W6 | non | Moustapha |
+| M4 | Mobile population : **demande de VGT** et suivi (sans compte) | 3 | API publique de W11, W12 (**livrée**, §8 « Contrat de la population », à valider) | identification sans compte : proposition matricule + téléphone enregistré, à valider avec le client | Moustapha |
+| M5 | Mobile population : **motos retrouvées** et informations (sans compte) | 2 | API publique de W10 (**livrée**, §8) et de W6 | non | Moustapha |
 
 Hors périmètre pour l'instant : QR Code et Mobile Money (phase 1 ou plus tard, À VALIDER AVEC LE CLIENT), hébergement.
 

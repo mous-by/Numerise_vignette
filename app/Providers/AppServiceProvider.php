@@ -60,6 +60,13 @@ class AppServiceProvider extends ServiceProvider
         // W6 (informations) ; réutilisé par les futures routes publiques (motos retrouvées, demande VGT).
         RateLimiter::for('public', fn (Request $request) => Limit::perMinute(30)->by($request->ip()));
 
+        // Écriture et suivi publics de la population (demande de VGT, M4) : 6 par minute et par IP, et 10 par heure
+        // par matricule (contre le devinage du téléphone du propriétaire, qui sert d'identification, D32).
+        RateLimiter::for('public-write', fn (Request $request) => [
+            Limit::perMinute(6)->by('ip:'.$request->ip()),
+            Limit::perHour(10)->by('plate:'.strtoupper(trim((string) $request->input('matricule')))),
+        ]);
+
         // Alias morph stables : ils s'écrivent dans activity_logs, model_has_roles et personal_access_tokens.
         Relation::morphMap([
             'user' => User::class,

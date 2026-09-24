@@ -14,6 +14,7 @@ use App\Models\DemandeVgt;
 use App\Models\Mairie;
 use App\Models\Moto;
 use App\Models\TarifVgt;
+use App\Services\Vgt\DemandeVgtPricing;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -134,12 +135,6 @@ class DemandeVgtController extends Controller
      */
     private function pricing(Moto $moto, int $vgtYear): array
     {
-        $isLate = $vgtYear < (int) date('Y');
-
-        return [
-            'base_amount' => TarifVgt::forGenre($moto->type_or_brand)->amount,
-            'is_late' => $isLate,
-            'surcharge_amount' => $isLate ? (int) config('vgt.late_surcharge_amount') : 0,
-        ];
+        return app(DemandeVgtPricing::class)->for($moto, $vgtYear);
     }
 }
