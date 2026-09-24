@@ -67,7 +67,7 @@ class SyncPermissionsTest extends TestCase
         ], $commissaire);
 
         $mairie = Role::findByName('mairie', 'web')->permissions->pluck('name')->sort()->values()->all();
-        $this->assertSame(['demandes-vgt.validate', 'demandes-vgt.view'], $mairie);
+        $this->assertSame(['demandes-vgt.confirm_payment', 'demandes-vgt.confirm_retrait', 'demandes-vgt.validate', 'demandes-vgt.view'], $mairie);
 
         $police = Role::findByName('police', 'web')->permissions->pluck('name')->sort()->values()->all();
         $this->assertSame(['controles.check'], $police);

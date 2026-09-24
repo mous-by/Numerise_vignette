@@ -26,7 +26,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 #[Fillable([
     'commissariat_id', 'mairie_id', 'moto_id', 'vgt_year', 'contact_phone', 'merchant_code',
-    'status', 'rejection_reason', 'base_amount', 'is_late', 'surcharge_amount',
+    'status', 'rejection_reason', 'base_amount', 'is_late', 'surcharge_amount', 'payment_confirmed_at',
+    'retrait_date',
 ])]
 class DemandeVgt extends Model
 {
@@ -53,6 +54,8 @@ class DemandeVgt extends Model
             'is_late' => 'boolean',
             'base_amount' => 'integer',
             'surcharge_amount' => 'integer',
+            'payment_confirmed_at' => 'date',
+            'retrait_date' => 'date',
         ];
     }
 

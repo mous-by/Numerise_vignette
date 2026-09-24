@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Web\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Web\ConfirmPaiementRequest;
+use App\Http\Requests\Web\ConfirmRetraitRequest;
 use App\Http\Requests\Web\StoreDemandeVgtRequest;
 use App\Http\Requests\Web\UpdateDemandeVgtRequest;
 use App\Http\Requests\Web\ValidateDemandeVgtRequest;
@@ -83,6 +85,26 @@ class DemandeVgtController extends Controller
             : "Demande VGT « {$demandeVgt->activityLabel()} » rejetée.";
 
         return redirect()->route('demandes-vgt.index')->with('status', $message);
+    }
+
+    public function confirmPaiement(ConfirmPaiementRequest $request, DemandeVgt $demandeVgt): RedirectResponse
+    {
+        $demandeVgt->update([
+            'status' => 'payee',
+            'payment_confirmed_at' => $request->validated('payment_confirmed_at'),
+        ]);
+
+        return redirect()->route('demandes-vgt.index')->with('status', "Paiement de « {$demandeVgt->activityLabel()} » confirmé.");
+    }
+
+    public function confirmRetrait(ConfirmRetraitRequest $request, DemandeVgt $demandeVgt): RedirectResponse
+    {
+        $demandeVgt->update([
+            'status' => 'retiree',
+            'retrait_date' => $request->validated('retrait_date'),
+        ]);
+
+        return redirect()->route('demandes-vgt.index')->with('status', "Retrait de la carte VGT « {$demandeVgt->activityLabel()} » confirmé.");
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\VgtCardTemplate;
 use App\Models\Mairie;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -25,5 +26,10 @@ class MairieFactory extends Factory
     public function inactive(): static
     {
         return $this->state(fn () => ['is_active' => false]);
+    }
+
+    public function template(VgtCardTemplate $template): static
+    {
+        return $this->state(fn () => ['card_template' => $template->value]);
     }
 }

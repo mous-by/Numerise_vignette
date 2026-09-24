@@ -47,4 +47,20 @@ class DemandeVgtPolicy
     {
         return $user->can('demandes-vgt.manage_tarifs');
     }
+
+    /** La mairie confirme le paiement (cahier §4 « réception des preuves de paiement ») d'une demande validée. */
+    public function confirmPayment(User $user, DemandeVgt $demandeVgt): bool
+    {
+        return $user->can('demandes-vgt.confirm_payment')
+            && $demandeVgt->mairie_id === $user->mairie_id
+            && $demandeVgt->status === DemandeVgtStatus::Validee;
+    }
+
+    /** La mairie confirme la remise de la carte physique (cahier §9 Retrait VGT) d'une demande payée. */
+    public function confirmRetrait(User $user, DemandeVgt $demandeVgt): bool
+    {
+        return $user->can('demandes-vgt.confirm_retrait')
+            && $demandeVgt->mairie_id === $user->mairie_id
+            && $demandeVgt->status === DemandeVgtStatus::Payee;
+    }
 }

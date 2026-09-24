@@ -170,6 +170,106 @@ class DemandeVgtScreenTest extends TestCase
         $this->actingAs($agent)->put("/demandes-vgt/{$demande->id}/decision", ['decision' => 'rejetee', 'rejection_reason' => 'x'])->assertForbidden();
     }
 
+    public function test_a_mairie_agent_confirms_the_payment_of_a_validated_demande(): void
+    {
+        $mairieModel = Mairie::factory()->create();
+        $agent = User::factory()->mairie($mairieModel)->create();
+        $demande = DemandeVgt::factory()->create(['mairie_id' => $mairieModel->id, 'status' => 'validee']);
+
+        $this->actingAs($agent)->put("/demandes-vgt/{$demande->id}/paiement", ['payment_confirmed_at' => now()->format('Y-m-d')])
+            ->assertRedirect('/demandes-vgt')->assertSessionHas('status');
+
+        $demande->refresh();
+        $this->assertSame(DemandeVgtStatus::Payee, $demande->status);
+        $this->assertNotNull($demande->payment_confirmed_at);
+        $this->assertSame(1, ActivityLog::where('action', 'demandes-vgt.updated')->where('subject_type', DemandeVgt::class)->count());
+    }
+
+    public function test_a_mairie_agent_cannot_confirm_payment_of_a_pending_demande(): void
+    {
+        $mairieModel = Mairie::factory()->create();
+        $agent = User::factory()->mairie($mairieModel)->create();
+        $demande = DemandeVgt::factory()->create(['mairie_id' => $mairieModel->id, 'status' => 'en_attente']);
+
+        $this->actingAs($agent)->put("/demandes-vgt/{$demande->id}/paiement", ['payment_confirmed_at' => now()->format('Y-m-d')])->assertForbidden();
+    }
+
+    public function test_a_mairie_agent_cannot_confirm_another_mairies_payment(): void
+    {
+        $agent = User::factory()->mairie()->create();
+        $demande = DemandeVgt::factory()->create(['status' => 'validee']); // autre mairie
+
+        $this->actingAs($agent)->put("/demandes-vgt/{$demande->id}/paiement", ['payment_confirmed_at' => now()->format('Y-m-d')])->assertForbidden();
+    }
+
+    public function test_the_payment_date_cannot_be_in_the_future(): void
+    {
+        $mairieModel = Mairie::factory()->create();
+        $agent = User::factory()->mairie($mairieModel)->create();
+        $demande = DemandeVgt::factory()->create(['mairie_id' => $mairieModel->id, 'status' => 'validee']);
+
+        $this->actingAs($agent)->from('/demandes-vgt')->put("/demandes-vgt/{$demande->id}/paiement", ['payment_confirmed_at' => now()->addDay()->format('Y-m-d')])
+            ->assertSessionHasErrors('payment_confirmed_at');
+    }
+
+    public function test_a_commissaire_cannot_confirm_payment(): void
+    {
+        $chef = User::factory()->commissaire()->create();
+        $demande = DemandeVgt::factory()->create(['commissariat_id' => $chef->commissariat_id, 'status' => 'validee']);
+
+        $this->actingAs($chef)->put("/demandes-vgt/{$demande->id}/paiement", ['payment_confirmed_at' => now()->format('Y-m-d')])->assertForbidden();
+    }
+
+    public function test_a_mairie_agent_confirms_the_retrait_of_a_paid_demande(): void
+    {
+        $mairieModel = Mairie::factory()->create();
+        $agent = User::factory()->mairie($mairieModel)->create();
+        $demande = DemandeVgt::factory()->create(['mairie_id' => $mairieModel->id, 'status' => 'payee']);
+
+        $this->actingAs($agent)->put("/demandes-vgt/{$demande->id}/retrait", ['retrait_date' => now()->format('Y-m-d')])
+            ->assertRedirect('/demandes-vgt')->assertSessionHas('status');
+
+        $demande->refresh();
+        $this->assertSame(DemandeVgtStatus::Retiree, $demande->status);
+        $this->assertNotNull($demande->retrait_date);
+        $this->assertSame(1, ActivityLog::where('action', 'demandes-vgt.updated')->where('subject_type', DemandeVgt::class)->count());
+    }
+
+    public function test_a_mairie_agent_cannot_confirm_retrait_of_an_unpaid_demande(): void
+    {
+        $mairieModel = Mairie::factory()->create();
+        $agent = User::factory()->mairie($mairieModel)->create();
+        $demande = DemandeVgt::factory()->create(['mairie_id' => $mairieModel->id, 'status' => 'validee']);
+
+        $this->actingAs($agent)->put("/demandes-vgt/{$demande->id}/retrait", ['retrait_date' => now()->format('Y-m-d')])->assertForbidden();
+    }
+
+    public function test_a_mairie_agent_cannot_confirm_another_mairies_retrait(): void
+    {
+        $agent = User::factory()->mairie()->create();
+        $demande = DemandeVgt::factory()->create(['status' => 'payee']); // autre mairie
+
+        $this->actingAs($agent)->put("/demandes-vgt/{$demande->id}/retrait", ['retrait_date' => now()->format('Y-m-d')])->assertForbidden();
+    }
+
+    public function test_the_retrait_date_cannot_be_in_the_future(): void
+    {
+        $mairieModel = Mairie::factory()->create();
+        $agent = User::factory()->mairie($mairieModel)->create();
+        $demande = DemandeVgt::factory()->create(['mairie_id' => $mairieModel->id, 'status' => 'payee']);
+
+        $this->actingAs($agent)->from('/demandes-vgt')->put("/demandes-vgt/{$demande->id}/retrait", ['retrait_date' => now()->addDay()->format('Y-m-d')])
+            ->assertSessionHasErrors('retrait_date');
+    }
+
+    public function test_a_commissaire_cannot_confirm_retrait(): void
+    {
+        $chef = User::factory()->commissaire()->create();
+        $demande = DemandeVgt::factory()->create(['commissariat_id' => $chef->commissariat_id, 'status' => 'payee']);
+
+        $this->actingAs($chef)->put("/demandes-vgt/{$demande->id}/retrait", ['retrait_date' => now()->format('Y-m-d')])->assertForbidden();
+    }
+
     public function test_a_commissaire_can_correct_and_resubmit_a_rejected_demande(): void
     {
         $chef = User::factory()->commissaire()->create();

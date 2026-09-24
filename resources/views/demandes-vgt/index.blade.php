@@ -25,6 +25,11 @@
                         <i class='bx bx-money'></i> Tarifs
                     </button>
                 @endcan
+                @if (auth()->user()->can('mairies.update'))
+                    <button type="button" class="btn btn-light btn-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#cardTemplatesModal">
+                        <i class='bx bx-id-card'></i> Modèles de carte
+                    </button>
+                @endif
                 @can('create', \App\Models\DemandeVgt::class)
                     @if ($hasMotos)
                         <button type="button" class="btn btn-light btn-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#createDemandeVgtModal">
@@ -70,6 +75,12 @@
                                     @if ($demande->status === \App\Enums\DemandeVgtStatus::Rejetee && $demande->rejection_reason)
                                         <div class="small text-muted cell-wrap text-break">{{ $demande->rejection_reason }}</div>
                                     @endif
+                                    @if ($demande->status === \App\Enums\DemandeVgtStatus::Payee && $demande->payment_confirmed_at)
+                                        <div class="small text-muted">le {{ $demande->payment_confirmed_at->format('d/m/Y') }}</div>
+                                    @endif
+                                    @if ($demande->status === \App\Enums\DemandeVgtStatus::Retiree && $demande->retrait_date)
+                                        <div class="small text-muted">le {{ $demande->retrait_date->format('d/m/Y') }}</div>
+                                    @endif
                                 </td>
                                 <td class="d-flex gap-1">
                                     @can('update', $demande)
@@ -82,6 +93,16 @@
                                             <i class='bx bx-check-shield'></i>
                                         </button>
                                     @endcan
+                                    @can('confirmPayment', $demande)
+                                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#confirmPaiement-{{ $demande->id }}" title="Confirmer le paiement">
+                                            <i class='bx bx-money'></i>
+                                        </button>
+                                    @endcan
+                                    @if (in_array($demande->status, [\App\Enums\DemandeVgtStatus::Payee, \App\Enums\DemandeVgtStatus::Retiree], true) && \Illuminate\Support\Facades\Gate::allows('view', $demande))
+                                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#retraitVgt-{{ $demande->id }}" title="Retrait de la carte VGT">
+                                            <i class='bx bx-id-card'></i>
+                                        </button>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
@@ -182,11 +203,113 @@
                 </script>
             @endif
         @endcan
+
+        @can('confirmPayment', $demande)
+            @php($paiementFailed = $errors->any() && old('paiement_demande_id') == $demande->id)
+            <div class="modal fade" id="confirmPaiement-{{ $demande->id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <form method="POST" action="{{ route('demandes-vgt.confirm-payment', $demande) }}">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" name="paiement_demande_id" value="{{ $demande->id }}">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class='bx bx-money me-2'></i>{{ $demande->moto->plate_number }} — {{ $demande->vgt_year }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                            </div>
+                            <div class="modal-body p-4">
+                                <p class="mb-3">Propriétaire : <strong>{{ $demande->moto->proprietaire->fullName() }}</strong><br>
+                                   Montant : <strong>{{ number_format($demande->totalAmount(), 0, ',', ' ') }} FCFA</strong><br>
+                                   Code marchand : <strong>{{ $demande->merchant_code ?? '—' }}</strong></p>
+                                <label for="payment_confirmed_at{{ $demande->id }}" class="form-label fw-semibold">Date de paiement</label>
+                                <input type="date" class="form-control @if ($paiementFailed && $errors->has('payment_confirmed_at')) is-invalid @endif" id="payment_confirmed_at{{ $demande->id }}" name="payment_confirmed_at" value="{{ $paiementFailed ? old('payment_confirmed_at') : date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
+                                @if ($paiementFailed && $errors->has('payment_confirmed_at'))<div class="invalid-feedback">{{ $errors->first('payment_confirmed_at') }}</div>@endif
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                <button type="submit" class="btn btn-primary">Confirmer</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            @if ($paiementFailed)
+                <script>
+                    window.addEventListener('DOMContentLoaded', () => new bootstrap.Modal(document.getElementById('confirmPaiement-{{ $demande->id }}')).show());
+                </script>
+            @endif
+        @endcan
+
+        @if (in_array($demande->status, [\App\Enums\DemandeVgtStatus::Payee, \App\Enums\DemandeVgtStatus::Retiree], true) && \Illuminate\Support\Facades\Gate::allows('view', $demande))
+            @php($retraitFailed = $errors->any() && old('retrait_demande_id') == $demande->id)
+            @php($proprietaire = $demande->moto->proprietaire)
+            @php($canConfirmRetrait = $demande->status === \App\Enums\DemandeVgtStatus::Payee && \Illuminate\Support\Facades\Gate::allows('confirmRetrait', $demande))
+            <div class="modal fade" id="retraitVgt-{{ $demande->id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <form method="POST" action="{{ route('demandes-vgt.confirm-retrait', $demande) }}">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" name="retrait_demande_id" value="{{ $demande->id }}">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class='bx bx-id-card me-2'></i>Carte VGT — {{ $demande->moto->plate_number }} ({{ $demande->vgt_year }})</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                            </div>
+                            <div class="modal-body p-4">
+                                <table class="table table-sm mb-3">
+                                    <tbody>
+                                        <tr><th class="text-muted">Propriétaire</th><td>{{ $proprietaire->fullName() }}</td></tr>
+                                        <tr><th class="text-muted">Numéro</th><td>{{ $proprietaire->phone }}</td></tr>
+                                        <tr><th class="text-muted">Adresse</th><td>{{ $proprietaire->address ?? '—' }}</td></tr>
+                                        <tr><th class="text-muted">Contact urgence</th><td>{{ $proprietaire->emergency_contact ?? '—' }}</td></tr>
+                                        <tr><th class="text-muted">Mairie de retrait</th><td>{{ $demande->mairie->name }}</td></tr>
+                                    </tbody>
+                                </table>
+
+                                @if ($canConfirmRetrait)
+                                    <label for="retrait_date{{ $demande->id }}" class="form-label fw-semibold">Date de retrait</label>
+                                    <input type="date" class="form-control @if ($retraitFailed && $errors->has('retrait_date')) is-invalid @endif" id="retrait_date{{ $demande->id }}" name="retrait_date" value="{{ $retraitFailed ? old('retrait_date') : date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
+                                    @if ($retraitFailed && $errors->has('retrait_date'))<div class="invalid-feedback">{{ $errors->first('retrait_date') }}</div>@endif
+                                @elseif ($demande->status === \App\Enums\DemandeVgtStatus::Retiree)
+                                    <p class="mb-0">Date de retrait : <strong>{{ $demande->retrait_date?->format('d/m/Y') }}</strong></p>
+                                @else
+                                    <p class="mb-0 text-muted">En attente de retrait par la mairie.</p>
+                                @endif
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-outline-primary" onclick="printVgtCard({{ $demande->id }})"><i class='bx bx-printer me-1'></i>Imprimer</button>
+                                @if ($canConfirmRetrait)
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                    <button type="submit" class="btn btn-primary">Confirmer</button>
+                                @else
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                                @endif
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <template id="printCard-{{ $demande->id }}">
+                @include($demande->mairie->card_template->view(), ['demande' => $demande, 'proprietaire' => $proprietaire])
+            </template>
+
+            @if ($retraitFailed)
+                <script>
+                    window.addEventListener('DOMContentLoaded', () => new bootstrap.Modal(document.getElementById('retraitVgt-{{ $demande->id }}')).show());
+                </script>
+            @endif
+        @endif
     @endforeach
 
     @can('manageTarifs', \App\Models\DemandeVgt::class)
         @include('demandes-vgt._tarifs')
     @endcan
+
+    @if (auth()->user()->can('mairies.update'))
+        @include('demandes-vgt._card_templates_settings')
+    @endif
 @endsection
 
 @push('scripts')
@@ -200,5 +323,29 @@
                 radio.addEventListener('change', () => wrap.classList.toggle('d-none', radio.value !== 'rejetee' || !radio.checked));
             });
         });
+
+        function printVgtCard(id) {
+            const tpl = document.getElementById('printCard-' + id);
+            if (!tpl) { return; }
+
+            // Iframe caché plutôt que window.open() : imprime sans dépendre d'un bloqueur de popup.
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+            document.body.appendChild(iframe);
+
+            const doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write('<!doctype html><html><head><title>Carte VGT</title></head><body>' + tpl.innerHTML + '</body></html>');
+            doc.close();
+
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+            setTimeout(() => document.body.removeChild(iframe), 1000);
+        }
     </script>
 @endpush
