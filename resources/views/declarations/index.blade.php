@@ -15,6 +15,7 @@
         </div>
     </div>
     <hr />
+    @include('partials.registre-tabs')
 
     <div class="card">
         <div class="card-header card-header-brand d-flex align-items-center justify-content-between flex-wrap gap-2">

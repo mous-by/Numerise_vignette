@@ -42,12 +42,19 @@
             </div>
         </div>
         <div class="card-body">
+            @php($counts = $demandes->groupBy(fn ($d) => $d->status->value)->map->count())
+            <div class="nv-chips mb-3" id="demandes-status-filter">
+                <button type="button" class="nv-chip active" data-status="">Toutes <b>{{ $demandes->count() }}</b></button>
+                @foreach (\App\Enums\DemandeVgtStatus::cases() as $case)
+                    <button type="button" class="nv-chip" data-key="{{ $case->value }}" data-status="{{ $case->label() }}">{{ $case->label() }} <b>{{ $counts[$case->value] ?? 0 }}</b></button>
+                @endforeach
+            </div>
             <div class="table-responsive">
                 <table class="table" id="demandes-vgt-table">
                     <thead>
                         <tr>
                             <th>DATE</th>
-                            <th>MATRICULE</th>
+                            <th>MOTO</th>
                             <th>PROPRIÉTAIRE</th>
                             <th>ANNÉE</th>
                             <th>MAIRIE</th>
@@ -60,14 +67,14 @@
                         @foreach ($demandes as $demande)
                             <tr>
                                 <td>{{ $demande->created_at->format('d/m/Y') }}</td>
-                                <td class="fw-semibold">{{ $demande->moto->plate_number }}</td>
-                                <td>{{ $demande->moto->proprietaire->fullName() }}</td>
+                                <td><div class="fw-semibold">{{ $demande->moto->plate_number }}</div><div class="small text-muted">{{ $demande->moto->type_or_brand }}</div></td>
+                                <td><div>{{ $demande->moto->proprietaire->fullName() }}</div><div class="small text-muted">{{ $demande->moto->proprietaire->phone }}</div></td>
                                 <td>{{ $demande->vgt_year }}</td>
                                 <td>{{ $demande->mairie->name }}</td>
                                 <td>
-                                    {{ number_format($demande->totalAmount(), 0, ',', ' ') }} FCFA
+                                    <div class="fw-semibold">{{ number_format($demande->totalAmount(), 0, ',', ' ') }} FCFA</div>
                                     @if ($demande->is_late)
-                                        <span class="badge bg-warning-subtle text-warning" title="Majoration pour arriéré incluse">Arriéré</span>
+                                        <span class="badge bg-warning-subtle" title="Majoration de {{ number_format($demande->surcharge_amount, 0, ',', ' ') }} FCFA incluse">Arriéré</span>
                                     @endif
                                 </td>
                                 <td>
@@ -242,64 +249,7 @@
         @endcan
 
         @if (in_array($demande->status, [\App\Enums\DemandeVgtStatus::Payee, \App\Enums\DemandeVgtStatus::Retiree], true) && \Illuminate\Support\Facades\Gate::allows('view', $demande))
-            @php($retraitFailed = $errors->any() && old('retrait_demande_id') == $demande->id)
-            @php($proprietaire = $demande->moto->proprietaire)
-            @php($canConfirmRetrait = $demande->status === \App\Enums\DemandeVgtStatus::Payee && \Illuminate\Support\Facades\Gate::allows('confirmRetrait', $demande))
-            <div class="modal fade" id="retraitVgt-{{ $demande->id }}" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <form method="POST" action="{{ route('demandes-vgt.confirm-retrait', $demande) }}">
-                            @csrf
-                            @method('PUT')
-                            <input type="hidden" name="retrait_demande_id" value="{{ $demande->id }}">
-                            <div class="modal-header">
-                                <h5 class="modal-title"><i class='bx bx-id-card me-2'></i>Carte VGT — {{ $demande->moto->plate_number }} ({{ $demande->vgt_year }})</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-                            </div>
-                            <div class="modal-body p-4">
-                                <table class="table table-sm mb-3">
-                                    <tbody>
-                                        <tr><th class="text-muted">Propriétaire</th><td>{{ $proprietaire->fullName() }}</td></tr>
-                                        <tr><th class="text-muted">Numéro</th><td>{{ $proprietaire->phone }}</td></tr>
-                                        <tr><th class="text-muted">Adresse</th><td>{{ $proprietaire->address ?? '—' }}</td></tr>
-                                        <tr><th class="text-muted">Contact urgence</th><td>{{ $proprietaire->emergency_contact ?? '—' }}</td></tr>
-                                        <tr><th class="text-muted">Mairie de retrait</th><td>{{ $demande->mairie->name }}</td></tr>
-                                    </tbody>
-                                </table>
-
-                                @if ($canConfirmRetrait)
-                                    <label for="retrait_date{{ $demande->id }}" class="form-label fw-semibold">Date de retrait</label>
-                                    <input type="date" class="form-control @if ($retraitFailed && $errors->has('retrait_date')) is-invalid @endif" id="retrait_date{{ $demande->id }}" name="retrait_date" value="{{ $retraitFailed ? old('retrait_date') : date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
-                                    @if ($retraitFailed && $errors->has('retrait_date'))<div class="invalid-feedback">{{ $errors->first('retrait_date') }}</div>@endif
-                                @elseif ($demande->status === \App\Enums\DemandeVgtStatus::Retiree)
-                                    <p class="mb-0">Date de retrait : <strong>{{ $demande->retrait_date?->format('d/m/Y') }}</strong></p>
-                                @else
-                                    <p class="mb-0 text-muted">En attente de retrait par la mairie.</p>
-                                @endif
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-outline-primary" onclick="printVgtCard({{ $demande->id }})"><i class='bx bx-printer me-1'></i>Imprimer</button>
-                                @if ($canConfirmRetrait)
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                                    <button type="submit" class="btn btn-primary">Confirmer</button>
-                                @else
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                                @endif
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <template id="printCard-{{ $demande->id }}">
-                @include($demande->mairie->card_template->view(), ['demande' => $demande, 'proprietaire' => $proprietaire])
-            </template>
-
-            @if ($retraitFailed)
-                <script>
-                    window.addEventListener('DOMContentLoaded', () => new bootstrap.Modal(document.getElementById('retraitVgt-{{ $demande->id }}')).show());
-                </script>
-            @endif
+            @include('demandes-vgt._retrait')
         @endif
     @endforeach
 
@@ -314,7 +264,17 @@
 
 @push('scripts')
     <script>
-        $('#demandes-vgt-table').DataTable({ scrollX: false, order: [[0, 'desc']] });
+        const demandesTable = $('#demandes-vgt-table').DataTable({ scrollX: false, order: [[0, 'desc']] });
+
+        // Filtre par statut (pastilles au-dessus du tableau).
+        const wantedStatus = new URLSearchParams(window.location.search).get('statut');
+        document.querySelectorAll('#demandes-status-filter .nv-chip').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('#demandes-status-filter .nv-chip').forEach((other) => other.classList.toggle('active', other === chip));
+                demandesTable.column(6).search(chip.dataset.status || '', false, true).draw();
+            });
+        });
+        document.querySelector('#demandes-status-filter .nv-chip[data-key="' + wantedStatus + '"]')?.click();
 
         document.querySelectorAll('[id^="decideDemandeVgt-"]').forEach((modal) => {
             const id = modal.id.replace('decideDemandeVgt-', '');
@@ -324,28 +284,80 @@
             });
         });
 
-        function printVgtCard(id) {
-            const tpl = document.getElementById('printCard-' + id);
-            if (!tpl) { return; }
+        // Impression : « Imprimer la carte » ferme la synthèse et ouvre une modale dédiée au choix du modèle
+        // (liste + grand aperçu recto/verso, le modèle de la mairie est présélectionné). « Imprimer ce modèle »
+        // charge la carte choisie (recto + verso, CR80) dans un iframe caché puis lance l'impression.
+        // Bootstrap 5.0 (thème) : pas de getOrCreateInstance.
+        const modalOf = (element) => bootstrap.Modal.getInstance(element) || new bootstrap.Modal(element);
 
-            // Iframe caché plutôt que window.open() : imprime sans dépendre d'un bloqueur de popup.
-            const iframe = document.createElement('iframe');
-            iframe.style.position = 'fixed';
-            iframe.style.right = '0';
-            iframe.style.bottom = '0';
-            iframe.style.width = '0';
-            iframe.style.height = '0';
-            iframe.style.border = '0';
-            document.body.appendChild(iframe);
+        document.querySelectorAll('.vgt-models-modal').forEach((modelsEl) => {
+            const retraitEl = document.getElementById(modelsEl.dataset.back);
+            const models = modelsEl.querySelectorAll('.vgt-model');
+            const printButton = modelsEl.querySelector('.vgt-print-chosen');
+            const recto = modelsEl.querySelector('.vgt-preview-recto');
+            const verso = modelsEl.querySelector('.vgt-preview-verso');
+            let chosen = null;
 
-            const doc = iframe.contentWindow.document;
-            doc.open();
-            doc.write('<!doctype html><html><head><title>Carte VGT</title></head><body>' + tpl.innerHTML + '</body></html>');
-            doc.close();
+            const faceUrl = (model, face) => model.dataset.src.replace('face=recto', 'face=' + face);
 
-            iframe.contentWindow.focus();
-            iframe.contentWindow.print();
-            setTimeout(() => document.body.removeChild(iframe), 1000);
-        }
+            const choose = (model) => {
+                chosen = model;
+                models.forEach((item) => {
+                    const active = item === model;
+                    item.classList.toggle('btn-primary', active);
+                    item.classList.toggle('btn-outline-secondary', !active);
+                });
+                recto.setAttribute('src', faceUrl(model, 'recto'));
+                verso.setAttribute('src', faceUrl(model, 'verso'));
+                printButton.disabled = false;
+            };
+
+            retraitEl.querySelector('.vgt-open-models').addEventListener('click', () => {
+                retraitEl.addEventListener('hidden.bs.modal', () => modalOf(modelsEl).show(), { once: true });
+                modalOf(retraitEl).hide();
+            });
+
+            modelsEl.querySelector('.vgt-models-back').addEventListener('click', () => {
+                modelsEl.addEventListener('hidden.bs.modal', () => modalOf(retraitEl).show(), { once: true });
+                modalOf(modelsEl).hide();
+            });
+
+            // Adapte la taille de l'aperçu à la largeur disponible (carte de 323 px à l'échelle 1).
+            const fitPreview = () => {
+                modelsEl.querySelectorAll('.nv-preview-card').forEach((card) => {
+                    const room = card.parentElement.parentElement.clientWidth || 484;
+                    const scale = Math.min(1.5, room / 323);
+                    card.style.width = (323 * scale) + 'px';
+                    card.style.height = (204 * scale) + 'px';
+                    card.querySelector('iframe').style.transform = 'scale(' + scale + ')';
+                });
+            };
+
+            modelsEl.addEventListener('shown.bs.modal', () => {
+                fitPreview();
+                models.forEach((model) => {
+                    const frame = model.querySelector('iframe');
+                    if (!frame.getAttribute('src')) { frame.setAttribute('src', model.dataset.src); }
+                });
+                if (!chosen) {
+                    choose([...models].find((model) => model.dataset.template === modelsEl.dataset.default) || models[0]);
+                }
+            });
+
+            models.forEach((model) => model.addEventListener('click', () => choose(model)));
+
+            printButton.addEventListener('click', () => {
+                if (!chosen) { return; }
+                const iframe = document.createElement('iframe');
+                iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+                iframe.addEventListener('load', () => {
+                    iframe.contentWindow.focus();
+                    iframe.contentWindow.print();
+                    setTimeout(() => iframe.remove(), 60000);
+                });
+                iframe.src = faceUrl(chosen, 'both');
+                document.body.appendChild(iframe);
+            });
+        });
     </script>
 @endpush

@@ -20,7 +20,7 @@ class DashboardService
     }
 
     /**
-     * @return array{mock: bool, cards: list<array<string, mixed>>, quick: list<array<string, mixed>>, tables: list<array<string, mixed>>, alerts: list<array<string, mixed>>}
+     * @return array{mock: bool, cards: list<array<string, mixed>>, quick: list<array<string, mixed>>, tables: list<array<string, mixed>>, alerts: list<array<string, mixed>>, hero: array<string, mixed>, tasks: list<array<string, mixed>>, pipeline: array<string, mixed>|null}
      */
     public function for(User $user): array
     {
@@ -33,6 +33,6 @@ class DashboardService
         $mock = $this->mock->for($user->roleName() ?? RoleName::Population);
 
         // Les alertes du socle restent réelles (ex. un seul superadmin actif) ; tout le reste est fictif.
-        return ['mock' => true, 'cards' => $mock['cards'], 'quick' => $mock['quick'], 'tables' => $mock['tables'], 'alerts' => $real['alerts']];
+        return ['mock' => true, 'cards' => $mock['cards'], 'quick' => $mock['quick'], 'tables' => $mock['tables'], 'alerts' => $real['alerts'], 'hero' => $real['hero'], 'tasks' => [], 'pipeline' => null];
     }
 }

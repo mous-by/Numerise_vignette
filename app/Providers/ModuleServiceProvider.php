@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\Dashboard\RealDashboardData;
 use App\Support\ModuleRegistry;
 use App\Support\PlannedModules;
 use Illuminate\Support\Facades\Auth;
@@ -26,6 +27,7 @@ class ModuleServiceProvider extends ServiceProvider
             $user = Auth::user();
 
             $view->with('navigation', $user ? app(ModuleRegistry::class)->navigation($user) : []);
+            $view->with('sidebarBadges', $user ? ['demandes-vgt' => app(RealDashboardData::class)->pendingDemandesCount($user)] : []);
             $view->with('plannedModules', $user ? app(PlannedModules::class)->visibleTo($user) : []);
         });
     }

@@ -91,14 +91,14 @@ class DashboardAndModulesTest extends TestCase
             ->assertDontSee('Commissariats')
             ->assertDontSee('Données fictives');
 
-        // Un agent de mairie n'a aucune permission au socle : accueil de bienvenue, rien d'autre.
-        $this->actingAs(User::factory()->mairie()->create())->get('/')->assertOk()->assertSee('Bienvenue')->assertDontSee('Utilisateurs actifs');
+        // Un agent de mairie n'a aucune permission du socle : pas de chiffres utilisateurs, mais ses tâches VGT.
+        $this->actingAs(User::factory()->mairie()->create())->get('/')->assertOk()->assertSee('Bonjour')->assertSee('À traiter maintenant')->assertDontSee('Utilisateurs actifs');
     }
 
     public function test_the_sidebar_lists_every_planned_module_for_national_roles(): void
     {
-        $expected = collect(config('planned_modules'))->pluck('label');
-        $this->assertGreaterThanOrEqual(11, $expected->count());
+        $expected = collect(config('planned_modules'))->except(config('sidebar.embedded_planned'))->pluck('label');
+        $this->assertGreaterThanOrEqual(9, $expected->count());
 
         // Superadmin : voit tout, y compris les modules déjà implémentés (via leur vraie route désormais, plus
         // la fiche « à venir » — même libellé visible dans les deux cas), sauf « Contrôle de police » : réservé
@@ -131,7 +131,7 @@ class DashboardAndModulesTest extends TestCase
         $this->actingAs($chef)->get('/')->assertSee('Propriétaires')->assertSee('Motos retrouvées')->assertSee('Demandes VGT')->assertDontSee('QR Code')->assertDontSee('Contrôle de police');
 
         $agent = User::factory()->mairie()->create();
-        $this->actingAs($agent)->get('/')->assertSee('Retrait VGT')->assertSee('Demandes VGT')->assertDontSee('Propriétaires')->assertDontSee('Motos retrouvées');
+        $this->actingAs($agent)->get('/')->assertSee('Cartes à remettre')->assertSee('Demandes VGT')->assertDontSee('Propriétaires')->assertDontSee('Motos retrouvées');
     }
 
     public function test_a_planned_module_page_is_a_sheet_with_open_points_and_no_data(): void
