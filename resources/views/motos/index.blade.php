@@ -31,35 +31,63 @@
             @endcan
         </div>
         <div class="card-body">
+            @php
+                $current = $motos->filter(fn ($m) => ! $m->is_stolen && $m->isVgtCurrent())->count();
+                $toRenew = $motos->filter(fn ($m) => ! $m->is_stolen && ! $m->isVgtCurrent())->count();
+                $stolen = $motos->where('is_stolen', true)->count();
+                $noCertificate = $motos->where('has_sale_certificate', false)->count();
+            @endphp
+            <div class="nv-chips mb-3" id="motos-filter">
+                <button type="button" class="nv-chip active" data-token="">Toutes <b>{{ $motos->count() }}</b></button>
+                <button type="button" class="nv-chip" data-token="vgt-ajour">Vignette à jour <b>{{ $current }}</b></button>
+                <button type="button" class="nv-chip" data-token="vgt-renouveler">À renouveler <b>{{ $toRenew }}</b></button>
+                <button type="button" class="nv-chip" data-token="volee">Volées <b>{{ $stolen }}</b></button>
+                <button type="button" class="nv-chip" data-token="sans-attestation">Sans attestation <b>{{ $noCertificate }}</b></button>
+            </div>
             <div class="table-responsive">
                 <table class="table" id="motos-table">
                     <thead>
                         <tr>
-                            <th>MATRICULE</th>
+                            <th>MOTO</th>
                             <th>PROPRIÉTAIRE</th>
-                            <th>COULEUR</th>
-                            <th>GENRE / MARQUE</th>
-                            <th>ANNÉE VGT</th>
+                            <th>VIGNETTE</th>
                             <th>ATTESTATION</th>
-                            <th width="10%">ACTIONS</th>
+                            <th width="12%">ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($motos as $moto)
                             <tr>
-                                <td class="fw-semibold">{{ $moto->plate_number }}</td>
-                                <td>{{ $moto->proprietaire->fullName() }}</td>
-                                <td>{{ $moto->color }}</td>
-                                <td>{{ $moto->type_or_brand }}</td>
-                                <td>{{ $moto->vgt_year }}</td>
+                                <td>
+                                    <div class="fw-semibold">{{ $moto->plate_number }}</div>
+                                    <div class="small text-muted">{{ $moto->type_or_brand }} · {{ $moto->color }}</div>
+                                </td>
+                                <td>
+                                    <div>{{ $moto->proprietaire->fullName() }}</div>
+                                    <div class="small text-muted">{{ $moto->proprietaire->phone }}</div>
+                                </td>
+                                <td>
+                                    <span class="d-none">{{ $moto->isVgtCurrent() ? 'vgt-ajour' : 'vgt-renouveler' }}{{ $moto->is_stolen ? ' volee' : '' }}{{ $moto->has_sale_certificate ? '' : ' sans-attestation' }}</span>
+                                    @if ($moto->is_stolen)
+                                        <span class="badge bg-danger-subtle">Volée</span>
+                                    @endif
+                                    @if ($moto->isVgtCurrent())
+                                        <span class="badge bg-success-subtle">{{ $moto->vgt_year }} à jour</span>
+                                    @else
+                                        <span class="badge bg-warning-subtle">{{ $moto->vgt_year }} à renouveler</span>
+                                    @endif
+                                </td>
                                 <td>
                                     @if ($moto->has_sale_certificate)
-                                        <span class="badge bg-success-subtle text-success">Oui</span>
+                                        <span class="badge bg-success-subtle">Oui</span>
                                     @else
-                                        <span class="badge bg-light text-dark">Non</span>
+                                        <span class="badge bg-light">Non</span>
                                     @endif
                                 </td>
                                 <td class="d-flex gap-1">
+                                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#ficheMoto-{{ $moto->id }}" title="Fiche de la moto">
+                                        <i class='bx bx-show'></i>
+                                    </button>
                                     @can('update', $moto)
                                         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editMoto-{{ $moto->id }}" title="Modifier">
                                             <i class='bx bx-edit'></i>
@@ -83,6 +111,9 @@
         </div>
     </div>
 
+    @foreach ($motos as $moto)
+        @include('motos._fiche', ['moto' => $moto])
+    @endforeach
     @can('create', \App\Models\Moto::class)
         @php($proprietaireCreateFailed = $errors->any() && $errors->has('first_name'))
         @php($createFailed = $errors->any() && ! old('moto_id') && ! $proprietaireCreateFailed)
@@ -203,7 +234,15 @@
 
 @push('scripts')
     <script>
-        $('#motos-table').DataTable({ scrollX: false });
+        const motosTable = $('#motos-table').DataTable({ scrollX: false });
+
+        // Filtre par pastille : jetons cachés dans la colonne « Vignette » (vgt-ajour, vgt-renouveler, volee, sans-attestation).
+        document.querySelectorAll('#motos-filter .nv-chip').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('#motos-filter .nv-chip').forEach((other) => other.classList.toggle('active', other === chip));
+                motosTable.column(2).search(chip.dataset.token || '', false, true).draw();
+            });
+        });
 
         $(document).on('submit', '.js-delete-moto', function (event) {
             event.preventDefault();

@@ -56,6 +56,14 @@ class Moto extends Model
     }
 
     /**
+     * @return HasMany<DemandeVgt, $this>
+     */
+    public function demandesVgt(): HasMany
+    {
+        return $this->hasMany(DemandeVgt::class);
+    }
+
+    /**
      * Recalcule `is_stolen` à partir des déclarations actives (cahier §5 Cas 2) : volée si au moins une
      * déclaration de vol ou de braquage n'a pas été supprimée. Appelé après toute création, modification ou
      * suppression d'une déclaration (W9) ; jamais modifiable depuis le formulaire Motos lui-même (pas dans

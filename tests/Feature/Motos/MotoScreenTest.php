@@ -271,4 +271,35 @@ class MotoScreenTest extends TestCase
         $this->expectException(QueryException::class);
         $proprietaire->forceDelete();
     }
+
+    public function test_the_list_shows_status_chips_and_a_sheet_per_moto(): void
+    {
+        $chef = User::factory()->commissaire()->create();
+        $owner = Proprietaire::factory()->create(['commissariat_id' => $chef->commissariat_id]);
+        $moto = Moto::factory()->create(['commissariat_id' => $chef->commissariat_id, 'proprietaire_id' => $owner->id, 'plate_number' => 'AB 1234 CD']);
+        $moto->forceFill(['is_stolen' => true])->save();
+
+        $this->actingAs($chef)->get('/motos')->assertOk()
+            ->assertSee('motos-filter', false)
+            ->assertSee('data-token="volee"', false)
+            ->assertSee('ficheMoto-'.$moto->id, false)
+            ->assertSee('Déclarée volée')
+            ->assertSee('Aucune demande de vignette.');
+    }
+
+    public function test_the_moto_sheet_does_not_show_another_motos_data(): void
+    {
+        $chef = User::factory()->commissaire()->create();
+        $owner = Proprietaire::factory()->create(['commissariat_id' => $chef->commissariat_id, 'first_name' => 'Awa', 'last_name' => 'Traore']);
+        $other = Proprietaire::factory()->create(['commissariat_id' => $chef->commissariat_id, 'first_name' => 'Issa', 'last_name' => 'Keita']);
+        $moto = Moto::factory()->create(['commissariat_id' => $chef->commissariat_id, 'proprietaire_id' => $owner->id]);
+        Moto::factory()->create(['commissariat_id' => $chef->commissariat_id, 'proprietaire_id' => $other->id]);
+
+        $page = $this->actingAs($chef)->get('/motos')->getContent();
+        $sheet = substr($page, strpos($page, 'id="ficheMoto-'.$moto->id.'"'));
+        $sheet = substr($sheet, 0, strpos($sheet, 'modal-footer'));
+
+        $this->assertStringContainsString('Awa', $sheet);
+        $this->assertStringNotContainsString('Issa', $sheet);
+    }
 }

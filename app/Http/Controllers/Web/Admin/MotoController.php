@@ -26,7 +26,7 @@ class MotoController extends Controller
         Gate::authorize('viewAny', Moto::class);
 
         return view('motos.index', [
-            'motos' => Moto::with('proprietaire')->orderBy('plate_number')->get(),
+            'motos' => Moto::with(['proprietaire', 'declarations', 'demandesVgt' => fn ($query) => $query->latest('id')])->orderBy('plate_number')->get(),
             // Le select Propriétaire (modale) charge par recherche (Select2 AJAX, search()) plutôt que tout
             // précharger : ce booléen suffit à savoir s'il faut proposer « Ajouter » ou « Créez d'abord ... ».
             'hasProprietaires' => Proprietaire::query()->exists(),
