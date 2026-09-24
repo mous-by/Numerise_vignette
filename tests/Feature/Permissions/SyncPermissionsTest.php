@@ -52,7 +52,7 @@ class SyncPermissionsTest extends TestCase
         $this->assertSame([
             'commissariats.create', 'commissariats.update', 'commissariats.view',
             'demandes-vgt.manage_tarifs', 'demandes-vgt.view', 'informations.view',
-            'mairies.create', 'mairies.update', 'mairies.view',
+            'mairies.create', 'mairies.update', 'mairies.view', 'sms.view',
             'users.activate', 'users.create', 'users.reset_password', 'users.revoke_access', 'users.update', 'users.view',
         ], $admin);
 

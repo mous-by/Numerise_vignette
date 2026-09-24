@@ -26,7 +26,7 @@ class SchemaTest extends TestCase
             'activity_logs', 'cache', 'cache_locks', 'commissariats', 'declarations', 'demandes_vgt', 'failed_jobs',
             'information_files', 'informations', 'job_batches', 'jobs', 'mairies', 'model_has_permissions', 'model_has_roles',
             'motos', 'motos_retrouvees', 'permissions', 'personal_access_tokens', 'proprietaires', 'role_has_permissions',
-            'roles', 'sessions', 'tarifs_vgt', 'users',
+            'roles', 'sessions', 'sms_messages', 'tarifs_vgt', 'users',
         ];
 
         $this->assertSame($expected, $tables);

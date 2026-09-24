@@ -17,7 +17,7 @@
         $groupOf = [
             'proprietaires' => 'Registre', 'motos' => 'Registre', 'declarations' => 'Registre', 'motos-retrouvees' => 'Registre',
             'demandes-vgt' => 'Vignettes VGT',
-            'users' => 'Administration', 'commissariats' => 'Administration', 'mairies' => 'Administration',
+            'users' => 'Administration', 'commissariats' => 'Administration', 'mairies' => 'Administration', 'sms' => 'Administration',
         ];
         $groupIcons = ['Registre' => 'bx bx-folder-open', 'Vignettes VGT' => 'bx bx-id-card', 'Administration' => 'bx bx-buildings'];
         // Le registre (propriétaires, motos, déclarations, motos retrouvées) tient en une seule entrée : les écrans

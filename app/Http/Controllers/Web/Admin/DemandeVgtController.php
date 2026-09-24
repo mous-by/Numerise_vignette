@@ -14,6 +14,7 @@ use App\Models\DemandeVgt;
 use App\Models\Mairie;
 use App\Models\Moto;
 use App\Models\TarifVgt;
+use App\Services\Sms\SmsNotifier;
 use App\Services\Vgt\DemandeVgtPricing;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -116,6 +117,8 @@ class DemandeVgtController extends Controller
             'status' => 'payee',
             'payment_confirmed_at' => $request->validated('payment_confirmed_at'),
         ]);
+
+        app(SmsNotifier::class)->paiementConfirme($demandeVgt);
 
         return redirect()->route('demandes-vgt.index')->with('status', "Paiement de « {$demandeVgt->activityLabel()} » confirmé.");
     }

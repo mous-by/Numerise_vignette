@@ -159,7 +159,7 @@ class DashboardAndModulesTest extends TestCase
         config(['modules.qr-code' => ['label' => 'QR Code', 'permissions' => ['view' => 'Voir'], 'roles' => []]]);
 
         $this->actingAs($superadmin)->get('/modules/qr-code')->assertNotFound();
-        $this->actingAs($superadmin)->get('/modules/sms')->assertOk();
+        $this->actingAs($superadmin)->get('/modules/paiements')->assertOk();
     }
 
     /** Le HTML de la sidebar seule (le corps de la page peut contenir les mêmes mots). */

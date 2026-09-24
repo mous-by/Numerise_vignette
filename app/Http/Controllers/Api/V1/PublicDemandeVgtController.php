@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\PublicVgtIdentityRequest;
 use App\Http\Requests\Api\V1\StorePublicDemandeVgtRequest;
 use App\Models\DemandeVgt;
+use App\Services\Sms\SmsNotifier;
 use App\Services\Vgt\DemandeVgtPricing;
 use App\Services\Vgt\PublicOwnerIdentifier;
 use Illuminate\Http\JsonResponse;
@@ -51,6 +52,8 @@ class PublicDemandeVgtController extends Controller
             'contact_phone' => $request->validated('phone'),
             'status' => DemandeVgtStatus::EnAttente,
         ]);
+
+        app(SmsNotifier::class)->demandeRecue($demande);
 
         return response()->json(['data' => $this->present($demande->load('mairie'))], 201);
     }
