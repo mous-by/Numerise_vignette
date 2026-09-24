@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Commissariat;
 use App\Models\Mairie;
 use App\Models\User;
+use App\Support\ModuleRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\BuildsFoundation;
 use Tests\TestCase;
@@ -225,9 +226,27 @@ class DashboardAndModulesTest extends TestCase
 
     public function test_the_settings_entry_is_hidden_from_roles_without_access(): void
     {
-        $sidebar = $this->sidebar($this->actingAs(User::factory()->adminNational()->create())->get('/')->getContent());
+        // L'admin national voit désormais Paramètres dès qu'il a accès à au moins un des écrans qui y vivent
+        // (Utilisateurs, Commissariats, Mairies : W1, W2, W5) — ce n'est plus un cas de « sans accès ». Un agent
+        // de mairie, lui, n'a par défaut aucun de ces écrans (seulement informations.view, hors de ce sous-menu).
+        $sidebar = $this->sidebar($this->actingAs(User::factory()->mairie()->create())->get('/')->getContent());
 
         $this->assertStringNotContainsString('Paramètres', $sidebar);
+    }
+
+    public function test_the_settings_entry_target_is_not_hardcoded_to_roles(): void
+    {
+        // ModuleRegistry::firstAccessibleSettingsItem() : fail-closed sans aucun accès, et le premier écran
+        // réellement accessible sinon — jamais figé sur /roles (réservée au superadmin). Selon les branches
+        // fusionnées (W1/W2/W5 ajoutent Utilisateurs/Commissariats/Mairies avant Rôles dans la liste), le
+        // superadmin atterrit sur le tout premier écran qui EXISTE : peu importe lequel, jamais null pour lui.
+        $registry = app(ModuleRegistry::class);
+
+        $this->assertNull($registry->firstAccessibleSettingsItem(User::factory()->mairie()->create()));
+
+        $item = $registry->firstAccessibleSettingsItem($this->superadmin());
+        $this->assertNotNull($item);
+        $this->assertContains($item['route'], collect($registry->settingsItems())->pluck('route')->all());
     }
 
     public function test_the_profile_shows_role_and_institution(): void

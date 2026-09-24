@@ -12,8 +12,8 @@ return [
 
     'roles' => [],
 
-    'navigation' => [
-        // Point d'entrée de la zone Paramètres (Rôles, Permissions, Attribution, ...), toujours en bas de la sidebar.
-        ['label' => 'Paramètres', 'icon' => 'bx bx-cog', 'route' => 'roles.index', 'permission' => 'roles.view', 'active' => ['roles.*', 'permissions.*', 'user-permissions.*', 'users.permissions.*', 'audit.*', 'system.*'], 'position' => 'bottom', 'order' => 900],
-    ],
+    // Pas d'entrée ici : le point d'entrée « Paramètres » est calculé dynamiquement par ModuleServiceProvider
+    // (App\Support\ModuleRegistry::firstAccessibleSettingsItem), pas déclaré statiquement — il doit s'adapter à
+    // qui peut voir quoi (Rôles est réservé au superadmin, mais Utilisateurs/Commissariats/Mairies ne le sont pas).
+    'navigation' => [],
 ];

@@ -73,7 +73,7 @@ class FoundationRulesTest extends TestCase
         // Routes accessibles à tout utilisateur connecté, sans permission métier (ARCHITECTURE §12).
         $authenticatedOnly = ['home', 'logout', 'password.change', 'password.change.update', 'profile.show', 'profile.update', 'profile.password', 'modules.show', 'api.logout', 'api.password', 'api.me'];
         $public = ['login', 'login.store'];
-        $publicApi = ['api.health', 'api.login'];
+        $publicApi = ['api.health', 'api.login', 'api.informations.index'];
 
         foreach (Route::getRoutes() as $route) {
             $name = $route->getName();

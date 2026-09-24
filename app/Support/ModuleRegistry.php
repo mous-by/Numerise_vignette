@@ -150,6 +150,45 @@ class ModuleRegistry
     }
 
     /**
+     * Écrans qui s'ouvrent depuis le sous-menu Paramètres plutôt que depuis une entrée directe de la sidebar
+     * (`navigation => []` dans leur manifeste) : source unique, réutilisée par `configuration/_menu.blade.php`
+     * (la liste elle-même) et par la sidebar (pour savoir si l'entrée « Paramètres » doit apparaître, et vers
+     * quel écran la faire pointer — le premier accessible, pas toujours Rôles qui reste réservé au superadmin).
+     *
+     * @return list<array{route: string, permission: string, label: string, icon: string, active: string}>
+     */
+    public function settingsItems(): array
+    {
+        return [
+            ['route' => 'users.index', 'permission' => 'users.view', 'label' => 'Utilisateurs', 'icon' => 'bx bx-user-circle', 'active' => 'users.index'],
+            ['route' => 'commissariats.index', 'permission' => 'commissariats.view', 'label' => 'Commissariats', 'icon' => 'bx bx-buildings', 'active' => 'commissariats.*'],
+            ['route' => 'mairies.index', 'permission' => 'mairies.view', 'label' => 'Mairies', 'icon' => 'bx bx-building-house', 'active' => 'mairies.*'],
+            ['route' => 'roles.index', 'permission' => 'roles.view', 'label' => 'Rôles', 'icon' => 'bx bx-id-card', 'active' => 'roles.*'],
+            ['route' => 'permissions.index', 'permission' => 'permissions.view', 'label' => 'Permissions', 'icon' => 'bx bx-shield-alt-2', 'active' => 'permissions.*'],
+            ['route' => 'user-permissions.index', 'permission' => 'permissions.assign', 'label' => 'Attribution des permissions', 'icon' => 'bx bx-user-check', 'active' => 'user-permissions.*'],
+            ['route' => 'audit.index', 'permission' => 'audit.view', 'label' => 'Audit', 'icon' => 'bx bx-list-check', 'active' => 'audit.*'],
+            ['route' => 'system.index', 'permission' => 'system.view', 'label' => 'Système', 'icon' => 'bx bx-server', 'active' => 'system.*'],
+        ];
+    }
+
+    /**
+     * Premier élément de settingsItems() que $user peut atteindre (route existante et permission accordée), ou
+     * null si aucun — dans ce cas l'entrée « Paramètres » ne doit pas apparaître du tout (fail-closed).
+     *
+     * @return array{route: string, permission: string, label: string, icon: string, active: string}|null
+     */
+    public function firstAccessibleSettingsItem(User $user): ?array
+    {
+        foreach ($this->settingsItems() as $item) {
+            if (Route::has($item['route']) && $user->can($item['permission'])) {
+                return $item;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * @return list<string>
      */
     private function roleList(RoleName|string $role, string $kind): array

@@ -25,8 +25,28 @@ class ModuleServiceProvider extends ServiceProvider
     {
         View::composer('partials.sidebar', function ($view) {
             $user = Auth::user();
+            $registry = app(ModuleRegistry::class);
 
-            $view->with('navigation', $user ? app(ModuleRegistry::class)->navigation($user) : []);
+            $navigation = $user ? $registry->navigation($user) : [];
+
+            // Paramètres n'est pas une entrée de manifeste comme les autres : elle regroupe des écrans à
+            // permissions différentes (Utilisateurs, Commissariats, Mairies, Rôles, Permissions, Audit, Système),
+            // donc elle apparaît si l'utilisateur peut en atteindre au moins un, et pointe vers le premier
+            // accessible (jamais toujours Rôles, réservée au superadmin).
+            if ($user && ($settings = $registry->firstAccessibleSettingsItem($user))) {
+                $navigation[] = [
+                    'label' => 'Paramètres',
+                    'icon' => 'bx bx-cog',
+                    'route' => $settings['route'],
+                    // 'users.permissions.*' : route de redirection historique (/users/{user}/permissions),
+                    // pas un écran de settingsItems() en soi, mais qui reste sous ce même chapeau.
+                    'active' => [...collect($registry->settingsItems())->pluck('active')->all(), 'users.permissions.*'],
+                    'position' => 'bottom',
+                    'order' => 900,
+                ];
+            }
+
+            $view->with('navigation', $navigation);
             $view->with('sidebarBadges', $user ? ['demandes-vgt' => app(RealDashboardData::class)->pendingDemandesCount($user)] : []);
             $view->with('plannedModules', $user ? app(PlannedModules::class)->visibleTo($user) : []);
         });
