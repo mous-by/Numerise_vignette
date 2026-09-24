@@ -61,6 +61,9 @@
                                         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editMairie-{{ $mairie->id }}" title="Modifier">
                                             <i class='bx bx-edit'></i>
                                         </button>
+                                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#cardSettings-{{ $mairie->id }}" title="Carte VGT : modèle, logo et monument">
+                                            <i class='bx bx-id-card'></i>
+                                        </button>
                                     @endcan
                                     @can('delete', $mairie)
                                         <form method="POST" action="{{ route('mairies.destroy', $mairie) }}" class="js-delete-mairie" data-name="{{ $mairie->name }}">
@@ -165,6 +168,29 @@
             @if ($editFailed ?? false)
                 <script>
                     window.addEventListener('DOMContentLoaded', () => new bootstrap.Modal(document.getElementById('editMairie-{{ $mairie->id }}')).show());
+                </script>
+            @endif
+
+            <div class="modal fade" id="cardSettings-{{ $mairie->id }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class='bx bx-id-card me-2'></i>Carte VGT — {{ $mairie->name }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            @include('demandes-vgt._card_settings_block', ['mairieOption' => $mairie, 'back' => 'mairies'])
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (($errors->has('logo') || $errors->has('monument')) && old('card_mairie') == $mairie->id)
+                <script>
+                    window.addEventListener('DOMContentLoaded', () => new bootstrap.Modal(document.getElementById('cardSettings-{{ $mairie->id }}')).show());
                 </script>
             @endif
         @endcan

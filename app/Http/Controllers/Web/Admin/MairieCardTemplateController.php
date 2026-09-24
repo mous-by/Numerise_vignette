@@ -28,7 +28,7 @@ class MairieCardTemplateController extends Controller
 
         $mairie->update($data);
 
-        return redirect()->route('demandes-vgt.index')->with('status', "Modèle de carte VGT de « {$mairie->name} » mis à jour.");
+        return $this->backTo($request)->with('status', "Modèle de carte VGT de « {$mairie->name} » mis à jour.");
     }
 
     /** Remplace le logo imprimé sur la carte VGT de la mairie (image PNG, JPEG ou WebP, 1 Mo maximum). */
@@ -38,9 +38,9 @@ class MairieCardTemplateController extends Controller
     }
 
     /** Revient à l'image par défaut. */
-    public function resetLogo(Mairie $mairie): RedirectResponse
+    public function resetLogo(Request $request, Mairie $mairie): RedirectResponse
     {
-        return $this->clearImage($mairie, 'logo_path', 'Logo');
+        return $this->clearImage($request, $mairie, 'logo_path', 'Logo');
     }
 
     /** Remplace l'image du monument (photo réelle) imprimée sur les cartes VGT 2025 et 2026 (2 Mo maximum). */
@@ -49,9 +49,9 @@ class MairieCardTemplateController extends Controller
         return $this->storeImage($request, $mairie, 'monument', 'monument_path', 'Image du monument', 2048);
     }
 
-    public function resetMonument(Mairie $mairie): RedirectResponse
+    public function resetMonument(Request $request, Mairie $mairie): RedirectResponse
     {
-        return $this->clearImage($mairie, 'monument_path', 'Image du monument');
+        return $this->clearImage($request, $mairie, 'monument_path', 'Image du monument');
     }
 
     private function storeImage(Request $request, Mairie $mairie, string $field, string $column, string $label, int $maxKb): RedirectResponse
@@ -72,10 +72,10 @@ class MairieCardTemplateController extends Controller
             Storage::disk('public')->delete($previous);
         }
 
-        return redirect()->route('demandes-vgt.index')->with('status', "$label de « {$mairie->name} » mis à jour.");
+        return $this->backTo($request)->with('status', "$label de « {$mairie->name} » mis à jour.");
     }
 
-    private function clearImage(Mairie $mairie, string $column, string $label): RedirectResponse
+    private function clearImage(Request $request, Mairie $mairie, string $column, string $label): RedirectResponse
     {
         $previous = $mairie->{$column};
         $mairie->update([$column => null]);
@@ -84,6 +84,12 @@ class MairieCardTemplateController extends Controller
             Storage::disk('public')->delete($previous);
         }
 
-        return redirect()->route('demandes-vgt.index')->with('status', "$label de « {$mairie->name} » remis par défaut.");
+        return $this->backTo($request)->with('status', "$label de « {$mairie->name} » remis par défaut.");
+    }
+
+    /** Ces réglages sont accessibles depuis Demandes VGT et depuis l'écran Mairies : on revient là où l'on était. */
+    private function backTo(Request $request): RedirectResponse
+    {
+        return redirect()->route($request->input('back') === 'mairies' ? 'mairies.index' : 'demandes-vgt.index');
     }
 }

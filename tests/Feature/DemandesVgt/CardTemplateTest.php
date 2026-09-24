@@ -222,4 +222,32 @@ class CardTemplateTest extends TestCase
 
         $this->actingAs(User::factory()->commissaire()->create())->post("/mairies/{$mairieModel->id}/monument-vgt", ['monument' => UploadedFile::fake()->image('m.jpg', 300, 400)])->assertForbidden();
     }
+
+    public function test_the_card_settings_are_also_reachable_from_the_mairies_screen(): void
+    {
+        $admin = User::factory()->adminNational()->create();
+        $mairieModel = Mairie::factory()->create(['name' => 'Mairie de Test']);
+
+        $this->actingAs($admin)->get('/mairies')->assertOk()
+            ->assertSee('cardSettings-'.$mairieModel->id, false)
+            ->assertSee('Carte VGT — Mairie de Test')
+            ->assertSee(route('mairies.logo.update', $mairieModel), false)
+            ->assertSee('name="back" value="mairies"', false);
+    }
+
+    public function test_the_settings_return_to_the_screen_they_were_used_from(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->adminNational()->create();
+        $mairieModel = Mairie::factory()->create();
+
+        $this->actingAs($admin)->put("/mairies/{$mairieModel->id}/carte-vgt-modele", ['card_template' => 'rose', 'back' => 'mairies'])->assertRedirect('/mairies');
+        $this->actingAs($admin)->post("/mairies/{$mairieModel->id}/logo-vgt", ['logo' => UploadedFile::fake()->image('l.png', 200, 200), 'back' => 'mairies'])->assertRedirect('/mairies');
+        $this->actingAs($admin)->delete("/mairies/{$mairieModel->id}/logo-vgt", ['back' => 'mairies'])->assertRedirect('/mairies');
+        $this->actingAs($admin)->post("/mairies/{$mairieModel->id}/monument-vgt", ['monument' => UploadedFile::fake()->image('m.png', 200, 300), 'back' => 'mairies'])->assertRedirect('/mairies');
+        $this->actingAs($admin)->delete("/mairies/{$mairieModel->id}/monument-vgt", ['back' => 'mairies'])->assertRedirect('/mairies');
+
+        // Sans indication (ou avec une valeur inconnue), retour sur l'écran Demandes VGT : aucune redirection libre.
+        $this->actingAs($admin)->put("/mairies/{$mairieModel->id}/carte-vgt-modele", ['card_template' => 'officiel', 'back' => 'https://exemple.test'])->assertRedirect('/demandes-vgt');
+    }
 }
