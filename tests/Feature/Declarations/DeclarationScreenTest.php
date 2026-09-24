@@ -200,4 +200,21 @@ class DeclarationScreenTest extends TestCase
 
         $this->assertSame(0, Declaration::acrossCommissariats()->count());
     }
+
+    public function test_the_list_shows_type_chips_and_a_sheet_per_declaration(): void
+    {
+        $chef = User::factory()->commissaire()->create();
+        $owner = Proprietaire::factory()->create(['commissariat_id' => $chef->commissariat_id]);
+        $moto = Moto::factory()->create(['commissariat_id' => $chef->commissariat_id, 'proprietaire_id' => $owner->id]);
+        $declaration = Declaration::create([
+            'commissariat_id' => $chef->commissariat_id, 'moto_id' => $moto->id, 'type' => 'vol',
+            'location' => 'Marché de Bamako', 'occurred_at' => '2026-09-01', 'description' => 'Volée devant le domicile.',
+        ]);
+
+        $this->actingAs($chef)->get('/declarations')->assertOk()
+            ->assertSee('declarations-filter', false)
+            ->assertSee('data-token="type-braquage"', false)
+            ->assertSee('ficheDeclaration-'.$declaration->id, false)
+            ->assertSee('Volée devant le domicile.');
+    }
 }

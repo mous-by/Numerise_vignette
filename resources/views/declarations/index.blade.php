@@ -31,35 +31,52 @@
             @endcan
         </div>
         <div class="card-body">
+            @php
+                $countOf = fn ($type) => $declarations->filter(fn ($d) => $d->type === $type)->count();
+                $stolenMotos = $declarations->filter(fn ($d) => $d->moto->is_stolen)->count();
+            @endphp
+            <div class="nv-chips mb-3" id="declarations-filter">
+                <button type="button" class="nv-chip active" data-token="">Toutes <b>{{ $declarations->count() }}</b></button>
+                <button type="button" class="nv-chip" data-token="type-vol">Vols <b>{{ $countOf(\App\Enums\DeclarationType::Vol) }}</b></button>
+                <button type="button" class="nv-chip" data-token="type-braquage">Braquages <b>{{ $countOf(\App\Enums\DeclarationType::Braquage) }}</b></button>
+                <button type="button" class="nv-chip" data-token="type-autre">Autres <b>{{ $countOf(\App\Enums\DeclarationType::Autre) }}</b></button>
+                <button type="button" class="nv-chip" data-token="moto-volee">Moto toujours volée <b>{{ $stolenMotos }}</b></button>
+            </div>
             <div class="table-responsive">
                 <table class="table" id="declarations-table">
                     <thead>
                         <tr>
-                            <th>DATE DE L'ACTE</th>
-                            <th>MATRICULE</th>
-                            <th>PROPRIÉTAIRE</th>
-                            <th>TYPE</th>
-                            <th>LIEU</th>
+                            <th>ACTE</th>
                             <th>MOTO</th>
-                            <th width="10%">ACTIONS</th>
+                            <th>LIEU</th>
+                            <th>SITUATION</th>
+                            <th width="12%">ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($declarations as $declaration)
                             <tr>
-                                <td>{{ $declaration->occurred_at->format('d/m/Y') }}</td>
-                                <td class="fw-semibold">{{ $declaration->moto->plate_number }}</td>
-                                <td>{{ $declaration->moto->proprietaire->fullName() }}</td>
-                                <td>{{ $declaration->type->label() }}</td>
+                                <td data-order="{{ $declaration->occurred_at->format('Y-m-d') }}">
+                                    <div class="fw-semibold">{{ $declaration->type->label() }}</div>
+                                    <div class="small text-muted">{{ $declaration->occurred_at->format('d/m/Y') }}</div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">{{ $declaration->moto->plate_number }}</div>
+                                    <div class="small text-muted">{{ $declaration->moto->proprietaire->fullName() }}</div>
+                                </td>
                                 <td class="cell-wrap text-break">{{ $declaration->location }}</td>
                                 <td>
+                                    <span class="d-none">type-{{ $declaration->type->value }}{{ $declaration->moto->is_stolen ? ' moto-volee' : '' }}</span>
                                     @if ($declaration->moto->is_stolen)
-                                        <span class="badge bg-danger">Volée</span>
+                                        <span class="badge bg-danger-subtle">Moto volée</span>
                                     @else
-                                        <span class="badge bg-light text-dark">En règle</span>
+                                        <span class="badge bg-success-subtle">Moto en règle</span>
                                     @endif
                                 </td>
                                 <td class="d-flex gap-1">
+                                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#ficheDeclaration-{{ $declaration->id }}" title="Fiche de la déclaration">
+                                        <i class='bx bx-show'></i>
+                                    </button>
                                     @can('update', $declaration)
                                         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editDeclaration-{{ $declaration->id }}" title="Modifier">
                                             <i class='bx bx-edit'></i>
@@ -82,6 +99,10 @@
             </div>
         </div>
     </div>
+
+    @foreach ($declarations as $declaration)
+        @include('declarations._fiche', ['declaration' => $declaration])
+    @endforeach
 
     @can('create', \App\Models\Declaration::class)
         @php($createFailed = $errors->any() && ! old('declaration_id'))
@@ -130,7 +151,14 @@
 
 @push('scripts')
     <script>
-        $('#declarations-table').DataTable({ scrollX: false, order: [[0, 'desc']] });
+        const declarationsTable = $('#declarations-table').DataTable({ scrollX: false, order: [[0, 'desc']] });
+
+        document.querySelectorAll('#declarations-filter .nv-chip').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('#declarations-filter .nv-chip').forEach((other) => other.classList.toggle('active', other === chip));
+                declarationsTable.column(3).search(chip.dataset.token || '', false, true).draw();
+            });
+        });
 
         $(document).on('submit', '.js-delete-declaration', function (event) {
             event.preventDefault();
