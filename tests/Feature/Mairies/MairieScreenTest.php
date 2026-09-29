@@ -146,4 +146,11 @@ class MairieScreenTest extends TestCase
         // cache avec l'état actif d'avant la désactivation.
         $this->actingAs($agent->fresh())->get('/')->assertRedirect('/login');
     }
+
+    public function test_the_list_offers_status_chips(): void
+    {
+        $this->actingAs($this->adminNational)->get('/mairies')->assertOk()
+            ->assertSee('mairies-filter', false)
+            ->assertSee('data-token="etat-inactif"', false);
+    }
 }

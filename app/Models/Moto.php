@@ -56,6 +56,14 @@ class Moto extends Model
     }
 
     /**
+     * @return HasMany<DemandeVgt, $this>
+     */
+    public function demandesVgt(): HasMany
+    {
+        return $this->hasMany(DemandeVgt::class);
+    }
+
+    /**
      * Recalcule `is_stolen` à partir des déclarations actives (cahier §5 Cas 2) : volée si au moins une
      * déclaration de vol ou de braquage n'a pas été supprimée. Appelé après toute création, modification ou
      * suppression d'une déclaration (W9) ; jamais modifiable depuis le formulaire Motos lui-même (pas dans
@@ -76,6 +84,17 @@ class Moto extends Model
             // contourne volontairement la protection en masse pour cette seule écriture système, calculée par W9.
             $this->forceFill(['is_stolen' => $stolen])->save();
         }
+    }
+
+    /**
+     * VGT à jour (W11, cahier §4 contrôle de police : « vignette à jour »). La vignette est valable pour
+     * l'année civile (cahier) : `vgt_year` est fixé à l'enregistrement initial (W8) et sera mis à jour par
+     * W12/W13 (paiement, retrait) au renouvellement — pas encore câblé : jusque-là, une demande de renouvellement
+     * seule (W11, en_attente/validee) ne suffit pas à mettre la vignette à jour.
+     */
+    public function isVgtCurrent(): bool
+    {
+        return $this->vgt_year >= now()->year;
     }
 
     public function sellerFullName(): ?string

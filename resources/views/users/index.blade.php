@@ -32,12 +32,23 @@
             @endcan
         </div>
         <div class="card-body">
+            @php
+                $roleCount = fn (array $names) => $users->filter(fn ($u) => in_array($u->roleName()?->value, $names, true))->count();
+                $inactiveCount = $users->where('is_active', false)->count();
+            @endphp
+            <div class="nv-chips mb-3" id="users-filter">
+                <button type="button" class="nv-chip active" data-token="">Tous <b>{{ $users->count() }}</b></button>
+                <button type="button" class="nv-chip" data-token="role-commissaire">Commissaires <b>{{ $roleCount(['commissaire']) }}</b></button>
+                <button type="button" class="nv-chip" data-token="role-police">Police <b>{{ $roleCount(['police']) }}</b></button>
+                <button type="button" class="nv-chip" data-token="role-mairie">Mairie <b>{{ $roleCount(['mairie']) }}</b></button>
+                <button type="button" class="nv-chip" data-token="role-national">Administration <b>{{ $roleCount(['superadmin', 'admin_national']) }}</b></button>
+                <button type="button" class="nv-chip" data-token="inactif">Inactifs <b>{{ $inactiveCount }}</b></button>
+            </div>
             <div class="table-responsive">
                 <table class="table" id="users-table">
                     <thead>
                         <tr>
-                            <th>NOM</th>
-                            <th>TÉLÉPHONE</th>
+                            <th>UTILISATEUR</th>
                             <th>RÔLE</th>
                             <th>INSTITUTION</th>
                             <th>STATUT</th>
@@ -46,19 +57,29 @@
                     </thead>
                     <tbody>
                         @foreach ($users as $user)
+                            @php($roleValue = $user->roleName()?->value)
                             <tr>
-                                <td class="fw-semibold">{{ $user->name }}</td>
-                                <td>{{ $user->phone }}</td>
+                                <td>
+                                    <div class="fw-semibold">{{ $user->name }}</div>
+                                    <div class="small text-muted">{{ $user->phone }}</div>
+                                </td>
                                 <td>{{ $user->roleName()?->label() ?? '—' }}</td>
                                 <td>{{ $user->commissariat->name ?? $user->mairie->name ?? '—' }}</td>
                                 <td>
+                                    <span class="d-none">{{ in_array($roleValue, ['superadmin', 'admin_national'], true) ? 'role-national' : 'role-'.$roleValue }}{{ $user->is_active ? '' : ' inactif' }}</span>
                                     @if ($user->is_active)
-                                        <span class="badge bg-success">Actif</span>
+                                        <span class="badge bg-success-subtle">Actif</span>
                                     @else
-                                        <span class="badge bg-secondary">Inactif</span>
+                                        <span class="badge bg-secondary-subtle">Inactif</span>
+                                    @endif
+                                    @if ($user->must_change_password)
+                                        <span class="badge bg-warning-subtle">Mot de passe temporaire</span>
                                     @endif
                                 </td>
                                 <td class="d-flex gap-1">
+                                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#ficheUser-{{ $user->id }}" title="Consulter">
+                                        <i class='bx bx-show'></i>
+                                    </button>
                                     @can('update', $user)
                                         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editUser-{{ $user->id }}" title="Modifier">
                                             <i class='bx bx-edit'></i>
@@ -97,9 +118,10 @@
             </div>
         </div>
     </div>
-        </div>
-    </div>
 
+    @foreach ($users as $user)
+        @include('users._fiche', ['user' => $user])
+    @endforeach
     @can('create', \App\Models\User::class)
         <div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
@@ -286,7 +308,14 @@
 
 @push('scripts')
     <script>
-        $('#users-table').DataTable({ scrollX: false });
+        const usersTable = $('#users-table').DataTable({ scrollX: false });
+
+        document.querySelectorAll('#users-filter .nv-chip').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('#users-filter .nv-chip').forEach((other) => other.classList.toggle('active', other === chip));
+                usersTable.column(3).search(chip.dataset.token || '', false, true).draw();
+            });
+        });
 
         // Institution affichée selon le rôle choisi (admin national et superadmin seulement).
         $('#role').on('change', function () {

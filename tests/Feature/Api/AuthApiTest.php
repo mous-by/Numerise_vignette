@@ -84,7 +84,8 @@ class AuthApiTest extends TestCase
         $this->api('GET', '/api/v1/auth/me', token: $token)
             ->assertOk()
             ->assertJsonPath('user.role.label', 'Police')
-            ->assertJsonPath('user.permissions', [])
+            // controles.check (W11, contrôle d'une moto) : premier défaut jamais donné au rôle police.
+            ->assertJsonPath('user.permissions', ['controles.check'])
             ->assertJsonPath('user.must_change_password', false);
     }
 

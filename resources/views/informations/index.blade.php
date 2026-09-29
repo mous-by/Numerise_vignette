@@ -64,26 +64,37 @@
             @endcan
         </div>
         <div class="card-body">
+            @php
+                $withImages = $informations->filter(fn ($i) => $i->images->isNotEmpty())->count();
+                $withDocuments = $informations->filter(fn ($i) => $i->documents->isNotEmpty())->count();
+                $textOnly = $informations->filter(fn ($i) => $i->images->isEmpty() && $i->documents->isEmpty())->count();
+            @endphp
+            <div class="nv-chips mb-3" id="informations-filter">
+                <button type="button" class="nv-chip active" data-token="">Toutes <b>{{ $informations->count() }}</b></button>
+                <button type="button" class="nv-chip" data-token="avec-image">Avec images <b>{{ $withImages }}</b></button>
+                <button type="button" class="nv-chip" data-token="avec-pdf">Avec PDF <b>{{ $withDocuments }}</b></button>
+                <button type="button" class="nv-chip" data-token="texte-seul">Texte seul <b>{{ $textOnly }}</b></button>
+            </div>
             <div class="table-responsive">
                 <table class="table" id="informations-table">
                     <thead>
                         <tr>
-                            <th>DATE</th>
-                            <th>COMMISSAIRE</th>
-                            <th>COMMISSARIAT</th>
+                            <th>PUBLICATION</th>
                             <th>DESCRIPTION</th>
                             <th>PIÈCES</th>
-                            <th width="10%">ACTIONS</th>
+                            <th width="12%">ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($informations as $information)
                             <tr>
-                                <td class="text-nowrap">{{ $information->published_at->format('d/m/Y') }}</td>
-                                <td>{{ $information->commissaire->name }}</td>
-                                <td>{{ $information->commissariat->name }}</td>
-                                <td class="cell-wrap text-break">{{ $information->description ?? '—' }}</td>
+                                <td data-order="{{ $information->published_at->format('Y-m-d') }}">
+                                    <div class="fw-semibold">{{ $information->commissariat->name }}</div>
+                                    <div class="small text-muted">{{ $information->commissaire->name }} · {{ $information->published_at->format('d/m/Y') }}</div>
+                                </td>
+                                <td class="cell-wrap text-break">{{ \Illuminate\Support\Str::limit($information->description ?? '—', 120) }}</td>
                                 <td class="text-nowrap">
+                                    <span class="d-none">{{ $information->images->isNotEmpty() ? 'avec-image ' : '' }}{{ $information->documents->isNotEmpty() ? 'avec-pdf ' : '' }}{{ $information->images->isEmpty() && $information->documents->isEmpty() ? 'texte-seul' : '' }}</span>
                                     <div class="d-flex align-items-center gap-1">
                                         @foreach ($information->images->take(3) as $image)
                                             <a href="{{ $image->url() }}" target="_blank" rel="noopener"><img src="{{ $image->url() }}" class="gallery-thumb" alt="Image"></a>
@@ -102,6 +113,9 @@
                                     </div>
                                 </td>
                                 <td class="d-flex gap-1">
+                                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#ficheInformation-{{ $information->id }}" title="Consulter">
+                                        <i class='bx bx-show'></i>
+                                    </button>
                                     @can('update', $information)
                                         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editInformation-{{ $information->id }}" title="Modifier">
                                             <i class='bx bx-edit'></i>
@@ -125,6 +139,9 @@
         </div>
     </div>
 
+    @foreach ($informations as $information)
+        @include('informations._fiche', ['information' => $information])
+    @endforeach
     @can('create', \App\Models\Information::class)
         <div class="modal fade" id="createInformationModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -282,7 +299,14 @@
 
 @push('scripts')
     <script>
-        $('#informations-table').DataTable({ scrollX: false });
+        const informationsTable = $('#informations-table').DataTable({ scrollX: false, order: [[0, 'desc']] });
+
+        document.querySelectorAll('#informations-filter .nv-chip').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('#informations-filter .nv-chip').forEach((other) => other.classList.toggle('active', other === chip));
+                informationsTable.column(2).search(chip.dataset.token || '', false, true).draw();
+            });
+        });
 
         $(document).on('submit', '.js-delete-information', function (event) {
             event.preventDefault();

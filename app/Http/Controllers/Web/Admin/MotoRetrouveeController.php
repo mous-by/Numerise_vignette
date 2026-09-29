@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Web\StoreMotoRetrouveeRequest;
 use App\Http\Requests\Web\UpdateMotoRetrouveeRequest;
 use App\Models\MotoRetrouvee;
+use App\Services\Sms\SmsNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -43,6 +44,8 @@ class MotoRetrouveeController extends Controller
 
             return $motoRetrouvee;
         });
+
+        app(SmsNotifier::class)->motoRetrouvee($motoRetrouvee);
 
         return redirect()->route('motos-retrouvees.index')->with('status', "Moto « {$motoRetrouvee->activityLabel()} » enregistrée comme retrouvée.");
     }

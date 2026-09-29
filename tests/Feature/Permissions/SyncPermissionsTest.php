@@ -50,14 +50,16 @@ class SyncPermissionsTest extends TestCase
 
         $admin = Role::findByName('admin_national', 'web')->permissions->pluck('name')->sort()->values()->all();
         $this->assertSame([
-            'commissariats.create', 'commissariats.update', 'commissariats.view', 'informations.view',
-            'mairies.create', 'mairies.update', 'mairies.view',
+            'commissariats.create', 'commissariats.update', 'commissariats.view',
+            'demandes-vgt.manage_tarifs', 'demandes-vgt.view', 'informations.view',
+            'mairies.create', 'mairies.update', 'mairies.view', 'sms.view',
             'users.activate', 'users.create', 'users.reset_password', 'users.revoke_access', 'users.update', 'users.view',
         ], $admin);
 
         $commissaire = Role::findByName('commissaire', 'web')->permissions->pluck('name')->sort()->values()->all();
         $this->assertSame([
             'declarations.create', 'declarations.delete', 'declarations.update', 'declarations.view',
+            'demandes-vgt.create', 'demandes-vgt.update', 'demandes-vgt.view',
             'informations.create', 'informations.delete', 'informations.update', 'informations.view',
             'motos-retrouvees.create', 'motos-retrouvees.update', 'motos-retrouvees.view',
             'motos.create', 'motos.delete', 'motos.update', 'motos.view',
@@ -66,9 +68,12 @@ class SyncPermissionsTest extends TestCase
         ], $commissaire);
 
         $mairie = Role::findByName('mairie', 'web')->permissions->pluck('name')->sort()->values()->all();
-        $this->assertSame(['informations.view'], $mairie);
+        $this->assertSame(['demandes-vgt.confirm_payment', 'demandes-vgt.confirm_retrait', 'demandes-vgt.validate', 'demandes-vgt.view', 'informations.view'], $mairie);
 
-        foreach (['police', 'population', 'superadmin'] as $role) {
+        $police = Role::findByName('police', 'web')->permissions->pluck('name')->sort()->values()->all();
+        $this->assertSame(['controles.check'], $police);
+
+        foreach (['population', 'superadmin'] as $role) {
             $this->assertCount(0, Role::findByName($role, 'web')->permissions, "Le rôle $role n'a aucun défaut au socle.");
         }
     }

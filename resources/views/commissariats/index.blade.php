@@ -32,6 +32,12 @@
             @endcan
         </div>
         <div class="card-body">
+            @php($inactiveCount = $commissariats->where('is_active', false)->count())
+            <div class="nv-chips mb-3" id="commissariats-filter">
+                <button type="button" class="nv-chip active" data-token="">Tous <b>{{ $commissariats->count() }}</b></button>
+                <button type="button" class="nv-chip" data-token="etat-actif">Actifs <b>{{ $commissariats->count() - $inactiveCount }}</b></button>
+                <button type="button" class="nv-chip" data-token="etat-inactif">Inactifs <b>{{ $inactiveCount }}</b></button>
+            </div>
             <div class="table-responsive">
                 <table class="table" id="commissariats-table">
                     <thead>
@@ -50,10 +56,11 @@
                                 <td>{{ $commissariat->code ?? '—' }}</td>
                                 <td>{{ $commissariat->users_count }}</td>
                                 <td>
+                                    <span class="d-none">{{ $commissariat->is_active ? 'etat-actif' : 'etat-inactif' }}</span>
                                     @if ($commissariat->is_active)
-                                        <span class="badge bg-success">Actif</span>
+                                        <span class="badge bg-success-subtle">Actif</span>
                                     @else
-                                        <span class="badge bg-secondary">Inactif</span>
+                                        <span class="badge bg-secondary-subtle">Inactif</span>
                                     @endif
                                 </td>
                                 <td class="d-flex gap-1">
@@ -173,7 +180,14 @@
 
 @push('scripts')
     <script>
-        $('#commissariats-table').DataTable({ scrollX: false });
+        const commissariatsTable = $('#commissariats-table').DataTable({ scrollX: false });
+
+        document.querySelectorAll('#commissariats-filter .nv-chip').forEach((chip) => {
+            chip.addEventListener('click', () => {
+                document.querySelectorAll('#commissariats-filter .nv-chip').forEach((other) => other.classList.toggle('active', other === chip));
+                commissariatsTable.column(3).search(chip.dataset.token || '', false, true).draw();
+            });
+        });
 
         $(document).on('submit', '.js-delete-commissariat', function (event) {
             event.preventDefault();
