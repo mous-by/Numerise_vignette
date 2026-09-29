@@ -60,3 +60,13 @@ export interface Information {
   document_urls: string[];
   published_at: string;
 }
+
+/**
+ * Résultat de GET /controles (M1, cahier §4 Police, §8) : contrôle d'une moto par son matricule en patrouille.
+ * Aucune donnée personnelle du propriétaire — uniquement les deux statuts demandés par le cahier.
+ */
+export interface ControleResult {
+  matricule: string;
+  volee: boolean;
+  vgt_a_jour: boolean;
+}

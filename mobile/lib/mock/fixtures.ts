@@ -1,4 +1,4 @@
-import type { Information, User } from '@/types/api';
+import type { ControleResult, Information, User } from '@/types/api';
 import { SAMPLE_IMAGE } from './sampleImage';
 
 // Données entièrement fictives (aucun vrai nom, numéro ni identifiant) : elles n'existent qu'en mode maquette.
@@ -54,3 +54,11 @@ export const MOCK_INFORMATIONS: Information[] = [
     published_at: ago(200),
   },
 ];
+
+// M1 : trois matricules de démonstration pour essayer les trois résultats (voir CLAUDE.md, §9). N'importe quel
+// autre matricule tapé renvoie « non trouvée », comme le ferait le vrai serveur pour une moto inconnue.
+export const MOCK_CONTROLES: Record<string, ControleResult> = {
+  'AB 1234 CD': { matricule: 'AB 1234 CD', volee: false, vgt_a_jour: true },
+  'EF 5678 GH': { matricule: 'EF 5678 GH', volee: true, vgt_a_jour: false },
+  'IJ 9012 KL': { matricule: 'IJ 9012 KL', volee: false, vgt_a_jour: false },
+};

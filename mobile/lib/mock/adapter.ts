@@ -1,6 +1,6 @@
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import type { AuthResponse, Paginated } from '@/types/api';
-import { MOCK_INFORMATIONS, MOCK_USER } from './fixtures';
+import { MOCK_CONTROLES, MOCK_INFORMATIONS, MOCK_USER } from './fixtures';
 
 // Adaptateur axios du mode maquette (voir config.ts) : il répond à la place du serveur, dans le format du contrat d'API
 // (CLAUDE.md, §8). Il ne vérifie aucun identifiant : n'importe quel numéro et mot de passe non vides ouvrent une session
@@ -96,6 +96,20 @@ export function mockAdapter(config: InternalAxiosRequestConfig): Promise<AxiosRe
       }
 
       return respond(config, 200, authResponse());
+    }
+
+    case 'get /controles': {
+      const matricule = String((config.params as { matricule?: string } | undefined)?.matricule ?? '').trim().toUpperCase();
+      if (matricule === '') {
+        return respond(config, 422, { message: 'Le matricule est obligatoire.', errors: { matricule: ['Le matricule est obligatoire.'] } });
+      }
+
+      const result = MOCK_CONTROLES[matricule];
+      if (!result) {
+        return respond(config, 404, { message: 'Aucune moto trouvée avec ce matricule.' });
+      }
+
+      return respond(config, 200, result);
     }
   }
 
