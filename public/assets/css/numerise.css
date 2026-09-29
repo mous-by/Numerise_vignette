@@ -796,14 +796,7 @@ html.semi-bleu .topbar {
 .sidebar-wrapper .metismenu li.planned-group > ul li a i { font-size: 1rem; margin: 0; }
 .sidebar-wrapper .metismenu li.planned-group > ul li.mm-active a { background: rgba(255, 255, 255, .1); color: #fff; }
 
-.nv-side-user { position: sticky; bottom: 0; display: flex; align-items: center; gap: .7rem; margin-top: 1.2rem; padding: .85rem 1rem; background: linear-gradient(180deg, rgba(13, 45, 79, 0), #0d2d4f 40%); border-top: 1px solid rgba(255, 255, 255, .08); }
-.nv-side-avatar { width: 2.2rem; height: 2.2rem; border-radius: 50%; background: linear-gradient(135deg, var(--nv-accent-2), #fb923c); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.nv-side-who { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; color: #fff; }
-.nv-side-who b { font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.nv-side-who small { font-size: .68rem; opacity: .65; }
-
 .wrapper.toggled:not(.sidebar-hovered) .nv-side-search,
-.wrapper.toggled:not(.sidebar-hovered) .nv-side-user,
 .wrapper.toggled:not(.sidebar-hovered) .metismenu li.nv-group { display: none; }
 .sidebar-wrapper .metismenu li.planned-group > a .menu-title { white-space: nowrap; font-size: .85rem; }
 .sidebar-wrapper .metismenu li.planned-group > a .planned-badge { margin-right: 1.1rem; }

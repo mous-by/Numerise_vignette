@@ -104,14 +104,6 @@
             </li>
         @endforeach
     </ul>
-
-    <div class="nv-side-user">
-        <span class="nv-side-avatar">{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}</span>
-        <span class="nv-side-who">
-            <b>{{ auth()->user()->name }}</b>
-            <small>{{ auth()->user()->roleName()?->label() }}</small>
-        </span>
-    </div>
 </div>
 
 <script>
