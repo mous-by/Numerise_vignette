@@ -1,4 +1,4 @@
-import type { ControleResult, Information, User } from '@/types/api';
+import type { ControleResult, Information, PublicMairie, PublicMotoRetrouvee, User } from '@/types/api';
 import { SAMPLE_IMAGE } from './sampleImage';
 
 // Données entièrement fictives (aucun vrai nom, numéro ni identifiant) : elles n'existent qu'en mode maquette.
@@ -62,3 +62,24 @@ export const MOCK_CONTROLES: Record<string, ControleResult> = {
   'EF 5678 GH': { matricule: 'EF 5678 GH', volee: true, vgt_a_jour: false },
   'IJ 9012 KL': { matricule: 'IJ 9012 KL', volee: false, vgt_a_jour: false },
 };
+
+// M5 : motos retrouvées, non encore récupérées par leur propriétaire (voir CLAUDE.md, §8 « Contrat de la
+// population »). Aucune donnée personnelle : les mêmes champs que l'API publique.
+export const MOCK_MOTOS_RETROUVEES: PublicMotoRetrouvee[] = [
+  { id: 3, matricule: 'QR 3344 ST', genre: 'Sanili', couleur: 'Noire', lieu: 'Pont des Martyrs', date_arret: ago(20).slice(0, 10), commissariat: 'Commissariat de démonstration' },
+  { id: 2, matricule: 'UV 5566 WX', genre: 'Djakarta', couleur: 'Rouge', lieu: 'Marché de Médine', date_arret: ago(96).slice(0, 10), commissariat: 'Commissariat de démonstration' },
+  { id: 1, matricule: 'YZ 7788 AB', genre: 'Sanili', couleur: 'Bleue', lieu: 'Rond-point de l\'Indépendance', date_arret: ago(240).slice(0, 10), commissariat: 'Autre commissariat de démonstration' },
+];
+
+// M4 : mairies de retrait proposées à la demande de VGT.
+export const MOCK_MAIRIES: PublicMairie[] = [
+  { id: 1, nom: 'Mairie de la Commune III (démonstration)' },
+  { id: 2, nom: 'Mairie de la Commune IV (démonstration)' },
+];
+
+// M4 : identité fictive reconnue pour essayer une demande de VGT (matricule + téléphone enregistré, voir §8). Sa
+// vignette est déjà à jour pour MOCK_OWNER_VGT_YEAR : demander cette année-là ou une année antérieure reproduit
+// l'erreur « vignette déjà à jour » du vrai serveur, comme demander l'année suivante crée une demande.
+export const MOCK_OWNER_MATRICULE = 'MN 4567 OP';
+export const MOCK_OWNER_PHONE = '+22370000055';
+export const MOCK_OWNER_VGT_YEAR = new Date().getFullYear();

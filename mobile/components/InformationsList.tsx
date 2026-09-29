@@ -3,6 +3,7 @@ import { Alert, FlatList, Image, Linking, RefreshControl, ScrollView, StyleSheet
 import { ActivityIndicator, Button, Card, Text } from 'react-native-paper';
 import MockBanner from '@/components/MockBanner';
 import { api, apiErrorMessage, isNotFound } from '@/lib/api';
+import { formatDate } from '@/lib/format';
 import { USE_MOCK } from '@/lib/mock/config';
 import { colors } from '@/lib/theme';
 import type { Information, Paginated } from '@/types/api';
@@ -10,10 +11,6 @@ import type { Information, Paginated } from '@/types/api';
 // M2 et M5 : les informations publiées par les commissaires (cahier §6 et §8), en lecture seule, pour la police (onglet)
 // et pour la population (espace public, sans connexion, D32). Chaque carte affiche, comme au cahier, la description,
 // les images et les fichiers PDF (plusieurs de chaque possible, W6), puis le nom du commissaire et du commissariat.
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-}
 
 async function openDocument(url: string) {
   if (USE_MOCK) {
@@ -112,8 +109,10 @@ export default function InformationsList() {
             <Card.Cover source={{ uri: item.image_urls[0] }} />
           ) : item.image_urls.length > 1 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.gallery} contentContainerStyle={styles.galleryContent}>
-              {item.image_urls.map((url) => (
-                <Image key={url} source={{ uri: url }} style={styles.galleryImage} />
+              {item.image_urls.map((url, index) => (
+                // La même image peut apparaître deux fois (glisser-déposer, W6) : la clé se base sur la position,
+                // jamais sur l'URL, qui n'a pas à être unique.
+                <Image key={`${item.id}-${index}`} source={{ uri: url }} style={styles.galleryImage} />
               ))}
             </ScrollView>
           ) : null}
@@ -122,7 +121,7 @@ export default function InformationsList() {
             {item.document_urls.length > 0 ? (
               <View style={styles.documents}>
                 {item.document_urls.map((url, index) => (
-                  <Button key={url} mode="outlined" icon="file-pdf-box" onPress={() => openDocument(url)} style={styles.document}>
+                  <Button key={`${item.id}-doc-${index}`} mode="outlined" icon="file-pdf-box" onPress={() => openDocument(url)} style={styles.document}>
                     {item.document_urls.length > 1 ? `Document ${index + 1} (PDF)` : 'Ouvrir le document (PDF)'}
                   </Button>
                 ))}
@@ -144,7 +143,9 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16, gap: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
-  card: { borderRadius: 14, overflow: 'hidden' },
+  // Pas de overflow: 'hidden' ici : Card.Cover arrondit déjà ses propres coins, et l'imposer au Card entier casse
+  // l'ombre de react-native-paper (Surface) — avertissement répété sinon.
+  card: { borderRadius: 14 },
   body: { gap: 10, paddingVertical: 12 },
   gallery: { maxHeight: 180 },
   galleryContent: { gap: 8, padding: 8 },

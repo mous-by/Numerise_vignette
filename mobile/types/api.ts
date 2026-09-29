@@ -70,3 +70,48 @@ export interface ControleResult {
   volee: boolean;
   vgt_a_jour: boolean;
 }
+
+/**
+ * Contrat de la population, routes publiques sans compte (D32, §8, consommé par M4 et M5). Aucune donnée
+ * personnelle du propriétaire n'est jamais renvoyée.
+ */
+export interface PublicMotoRetrouvee {
+  id: number;
+  matricule: string;
+  genre: string;
+  couleur: string;
+  lieu: string;
+  date_arret: string;
+  commissariat: string;
+}
+
+export interface PublicMairie {
+  id: number;
+  nom: string;
+}
+
+export type DemandeVgtStatusCode = 'en_attente' | 'validee' | 'rejetee' | 'payee' | 'retiree';
+
+export interface DemandeVgt {
+  reference: string;
+  annee: number;
+  statut: { code: DemandeVgtStatusCode; libelle: string };
+  motif_rejet: string | null;
+  montant: { base: number; majoration: number; total: number };
+  mairie: { id: number; nom: string | null };
+  paiement_confirme_le: string | null;
+  retrait_le: string | null;
+  cree_le: string;
+}
+
+/** Réponse de POST /demandes-vgt. */
+export interface StoreDemandeVgtResponse {
+  data: DemandeVgt;
+}
+
+/** Réponse de POST /demandes-vgt/suivi. */
+export interface SuiviDemandeVgtResponse {
+  matricule: string;
+  vgt_a_jour: boolean;
+  data: DemandeVgt[];
+}

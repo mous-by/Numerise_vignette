@@ -67,7 +67,7 @@ Cas d'usage : (1) enregistrement initial et acquisition de la VGT au commissaria
 - Audit synchrone immuable, cloisonnement institutionnel fail-closed, protection du dernier superadmin, superadmins créés automatiquement.
 - Tableau de bord (deux vues) en données fictives activables, sidebar listant tous les modules à venir, **Paramètres** en bas de la sidebar.
 - Profil à deux onglets (informations, mot de passe), page de connexion avec formulaire à droite et diaporama d'images, survol unifié dans toute l'interface.
-- API mobile d'authentification (`/api/v1`) et application Expo (connexion, changement de mot de passe, profil, **informations** (M2) et **contrôle d'une moto** (M1) de la police, contre l'API réelle).
+- API mobile d'authentification (`/api/v1`) et application Expo complète : côté police, **informations** (M2) et **contrôle d'une moto** (M1) ; côté population, sans connexion, **motos retrouvées** et **demande de VGT** (M4, M5) — tout contre l'API réelle, plus de mode maquette qu'en développement.
 - 16 tables migrées, tests automatiques (`composer test`), thème et assets locaux.
 
 **Reste** : voir §10 (backlog).
@@ -247,13 +247,15 @@ tests/                 Feature, Unit, Architecture
 | D29 | Application mobile : **Expo (React Native) dans le dossier `mobile/`** du même dépôt, testée avec Expo Go ; elle ne consomme que l'API `/api/v1` |
 | D30 | Un seul fichier `.md` dans le dépôt : ce guide |
 | D31 | **Répartition par plateforme** : Moustapha = **mobile** (M1, M2, M4, M5) et les écrans Web **Audit** et **Système** (W3, W4), Amadou = **Web** (W1, W2, W5 à W14, avec l'API de chaque module). Les deux travaillent en parallèle : le mobile avance sur le contrat d'API (§8) sans attendre le Web. Hébergement **reporté** jusqu'au moment opportun (aucune tâche pour l'instant). Charge : 15 points contre 39 (§10) |
-| D32 | **La population n'a pas d'authentification** (décision de Moustapha, conforme au cahier §7 « Sécurité » : seuls la police, les commissaires et les agents de mairie utilisent la connexion). Elle consulte les informations et les motos retrouvées, et demande une VGT **sans compte**, par des routes **publiques** de l'API (sans jeton, limitées par IP, lecture seule sauf la demande de VGT). Comment elle s'identifie pour la demande (matricule, téléphone enregistré, code reçu par SMS : le cahier §8 parle d'un « sms pour la confirmation ») : À VALIDER AVEC LE CLIENT. Supprime la tâche M3 |
+| D32 | **La population n'a pas d'authentification** (décision de Moustapha, conforme au cahier §7 « Sécurité » : seuls la police, les commissaires et les agents de mairie utilisent la connexion). Elle consulte les informations et les motos retrouvées, et demande une VGT **sans compte**, par des routes **publiques** de l'API (sans jeton, limitées par IP, lecture seule sauf la demande de VGT). Elle s'identifie pour la demande par le **matricule** de sa moto et le **téléphone enregistré** à son nom au commissariat — **validé par le client** (2026-09-30). Supprime la tâche M3 |
 
 ### Points ouverts — client (À VALIDER AVEC LE CLIENT)
 
 Non bloquants pour le socle : durée de conservation de l'audit ; nombre de commissaires par commissariat ; canal de remise du mot de passe temporaire (main propre, SMS plus tard) ; champs additionnels des institutions ; création des agents de mairie par l'admin national et le superadmin seulement ; logo définitif de la plateforme ; **validation des visuels du diaporama de connexion** (images générées par IA, sans texte, drapeau, blason ni marque ; à faire valider par le client avant toute mise en ligne — sur la diapositive 5, les deux agents flous à l'arrière-plan semblent tenir des armes longues : à régénérer avec les prompts de la version 2 si cela gêne).
 
-**Bloquants pour les modules métier** (à traiter avant leur conception) : identification de la population **sans compte** pour la demande de VGT (D32) ; qui enregistre « moto retrouvée » (commissaire, police ou les deux) ; un propriétaire peut-il avoir plusieurs motos, historique des changements de propriétaire ; opérateur SMS, langue et contenu des messages (W14 : envoi simulé, gabarits provisoires dans `config/sms.php`) ; QR Code et Mobile Money : phase 1 ou plus tard.
+**Bloquants pour les modules métier** (à traiter avant leur conception) : qui enregistre « moto retrouvée » (commissaire, police ou les deux) ; un propriétaire peut-il avoir plusieurs motos, historique des changements de propriétaire ; opérateur SMS, langue et contenu des messages (W14 : envoi simulé, gabarits provisoires dans `config/sms.php`) ; QR Code et Mobile Money : phase 1 ou plus tard.
+
+~~Identification de la population sans compte pour la demande de VGT (D32)~~ → **validé par le client** (2026-09-30, Moustapha) : matricule de la moto + téléphone enregistré à son nom au commissariat, comme proposé (§8, « Contrat de la population »). Débloque M4.
 
 ~~Paiement (montant, qui confirme, statut, rôle du « code marchand de l'État »)~~ → PROPOSITION TECHNIQUE d'Amadou pour W12 : montant déjà fixé à la demande (W11) ; la mairie confirme (cahier §4 « réception des preuves de paiement »), statut `payee` s'ajoute à `DemandeVgtStatus` ; le code marchand reste une simple référence saisie par le commissaire à la demande (W11), pas de passerelle de paiement réelle.
 
@@ -389,7 +391,7 @@ Statut : **fusionné et en service** (Web, API, mobile). Écran Web : le commiss
 
 ### Contrat de la population — routes publiques (D32, consommé par M4 et M5)
 
-Statut : implémenté et testé (`tests/Feature/Api/PublicPopulationApiTest.php`) ; **à valider par Moustapha** avant que M4 et M5 passent du mode maquette à l'API réelle. La population n'a pas de compte : aucune de ces routes ne demande de jeton. Lecture limitée à 30 requêtes par minute et par IP (`throttle:public`) ; écriture et suivi limités à **6 par minute et par IP, et 10 par heure et par matricule** (`throttle:public-write`, contre le devinage du téléphone). Aucune donnée personnelle du propriétaire n'est jamais renvoyée. Codes 429 au-delà.
+Statut : implémenté, testé (`tests/Feature/Api/PublicPopulationApiTest.php`) et **validé** (contrat vérifié par Moustapha contre l'API réelle, identification confirmée par le client, 2026-09-30). La population n'a pas de compte : aucune de ces routes ne demande de jeton. Lecture limitée à 30 requêtes par minute et par IP (`throttle:public`) ; écriture et suivi limités à **6 par minute et par IP, et 10 par heure et par matricule** (`throttle:public-write`, contre le devinage du téléphone). Aucune donnée personnelle du propriétaire n'est jamais renvoyée. Codes 429 au-delà.
 
 | Méthode | Route | Rôle |
 |---|---|---|
@@ -417,7 +419,7 @@ Statut : implémenté et testé (`tests/Feature/Api/PublicPopulationApiTest.php`
 { "matricule": "AB 1234 CD", "vgt_a_jour": false, "data": [ { …même forme que ci-dessus, 20 demandes au plus… } ] }
 ```
 
-- **Identification (PROPOSITION TECHNIQUE — À VALIDER AVEC LE CLIENT)** : le propriétaire s'identifie par le **matricule** de sa moto et le **téléphone enregistré** à son nom au commissariat (`App\Services\Vgt\PublicOwnerIdentifier`). Un matricule inconnu et un mauvais numéro renvoient **la même réponse** (`422`, « Aucune moto ne correspond à ce matricule et à ce numéro de téléphone. ») pour ne rien révéler sur les motos enregistrées. Le cahier (§8) parle d'un SMS de confirmation : le code reçu par SMS viendra avec W14 et pourra renforcer cette identification.
+- **Identification** (validée par le client, 2026-09-30) : le propriétaire s'identifie par le **matricule** de sa moto et le **téléphone enregistré** à son nom au commissariat (`App\Services\Vgt\PublicOwnerIdentifier`). Un matricule inconnu et un mauvais numéro renvoient **la même réponse** (`422`, « Aucune moto ne correspond à ce matricule et à ce numéro de téléphone. ») pour ne rien révéler sur les motos enregistrées. Le cahier (§8) parle d'un SMS de confirmation : le code reçu par SMS viendra avec W14 et pourra renforcer cette identification.
 - **Règles de la demande** : une moto enregistrée (W8) ; `vgt_year` supérieure à l'année déjà couverte par la moto (`422` sinon) et au plus l'année prochaine ; une seule demande en cours par moto et par année (`409`) ; tarif et majoration comme au commissariat (`App\Services\Vgt\DemandeVgtPricing`, partagé avec l'écran Web). La demande est rattachée au commissariat de la moto, puis suit le même parcours que celle du commissaire : validation, paiement et retrait à la mairie choisie. Le paiement n'est pas fait dans l'API (confirmé par la mairie, W12).
 - **Audit** : la création est journalisée (`demandes-vgt.created`, canal `api`, sans utilisateur).
 - Validation : `422 {"message","errors":{...}}` comme le reste de l'API.
@@ -443,15 +445,15 @@ Statut : implémenté et testé (`tests/Feature/Api/ControleApiTest.php`).
 
 Application **Expo (React Native, TypeScript, Expo Router)**, à essayer avec **Expo Go**, dans le même dépôt (D29). Elle consomme uniquement l'API `/api/v1` (§8). Mêmes versions d'Expo que le projet KalanNet (SDK 57) : compatible avec le même Expo Go. Pile : `expo-router`, `react-native-paper`, `axios`, `expo-secure-store` (le jeton est stocké dans le Keystore du téléphone, jamais en clair).
 
-**Écrans** : **espace public sans connexion** (la population n'a pas de compte, D32 : informations ; motos retrouvées et demande de VGT en fiches « À venir » ; bouton « Connexion » en haut à droite, retour possible) ; connexion (numéro de téléphone + mot de passe, réservée à la police) ; **changement de mot de passe obligatoire** tant que le mot de passe est temporaire (le jeton est alors restreint, §8) ; accueil (bonjour, rôle, institution, **contrôle d'une moto**, état du serveur en bas, tirer pour rafraîchir) ; **informations** (M2 : liste en lecture seule, description, image, PDF, commissaire et commissariat, pages suivantes au défilement) ; profil (informations, changer le mot de passe, déconnexion). Un 401 ou un compte désactivé déconnecte proprement l'application et affiche un message.
+**Écrans** : **espace public sans connexion** (la population n'a pas de compte, D32 : informations ; **motos retrouvées** (M5, liste en lecture seule) ; **demande de VGT** (M4, nouvelle demande et suivi) ; bouton « Connexion » en haut à droite, retour possible) ; connexion (numéro de téléphone + mot de passe, réservée à la police) ; **changement de mot de passe obligatoire** tant que le mot de passe est temporaire (le jeton est alors restreint, §8) ; accueil (bonjour, rôle, institution, **contrôle d'une moto**, état du serveur en bas, tirer pour rafraîchir) ; **informations** (M2 : liste en lecture seule, description, image, PDF, commissaire et commissariat, pages suivantes au défilement) ; profil (informations, changer le mot de passe, déconnexion). Un 401 ou un compte désactivé déconnecte proprement l'application et affiche un message.
 
 **M1 Contrôle d'une moto** (composant `ControleMoto`, sur l'écran d'accueil — le cahier ne donne au mobile police que deux onglets, « Accueil et informations », §9) : un champ matricule (`GET /controles`, §8), résultat en deux statuts (volée ou non, VGT à jour ou non) avec icône et couleur, historique des derniers matricules contrôlés dans la session (non persisté, appui pour recontrôler) — utile en patrouille où plusieurs motos sont vérifiées à la suite. Un matricule inconnu affiche le message du serveur (« Aucune moto trouvée avec ce matricule »), jamais une erreur générique.
 
 ```
 mobile/app/            _layout.tsx (gardes de navigation Stack.Protected), login, change-password, public/ (espace de la population), (tabs)/{index,informations,profile} (police)
-mobile/components/     BrandTitle, PasswordForm, InformationsList, ControleMoto, ComingSoon, MockBanner
+mobile/components/     BrandTitle, PasswordForm, InformationsList, ControleMoto, MotosRetrouveesList, DemandeVgtForm, MockBanner
 mobile/context/        AuthContext (session, jeton, changement de mot de passe)
-mobile/lib/            api.ts (axios + intercepteurs + messages en français), storage.ts (SecureStore), theme.ts, mock/ (mode maquette)
+mobile/lib/            api.ts (axios + intercepteurs + messages en français), storage.ts (SecureStore), theme.ts (palette et pastilles de statut, synchronisées avec numerise.css), format.ts (dates, FCFA), mock/ (mode maquette)
 mobile/types/api.ts    types du contrat d'API
 ```
 
@@ -513,7 +515,7 @@ Authentification Web et API, rôles, permissions à deux voies, audit, cloisonne
 | W14 | Module **SMS** | 3 | W10, W12 | opérateur, langue, contenu (envoi simulé en attendant) | Amadou |
 | M1 | Mobile police : **contrôle d'une moto** | 4 | endpoint livré avec W11 (fait, §8) | non (résolu avec W13, §5) | Moustapha |
 | M2 | Mobile police : **informations** | 1 | API de W6 | non | Moustapha |
-| M4 | Mobile population : **demande de VGT** et suivi (sans compte) | 3 | API publique de W11, W12 (**livrée**, §8 « Contrat de la population », à valider) | identification sans compte : proposition matricule + téléphone enregistré, à valider avec le client | Moustapha |
+| M4 | Mobile population : **demande de VGT** et suivi (sans compte) | 3 | API publique de W11, W12 (**livrée et validée**, §8 « Contrat de la population ») | non (identification matricule + téléphone validée par le client, 2026-09-30) | Moustapha |
 | M5 | Mobile population : **motos retrouvées** et informations (sans compte) | 2 | API publique de W10 (**livrée**, §8) et de W6 | non | Moustapha |
 
 Hors périmètre pour l'instant : QR Code et Mobile Money (phase 1 ou plus tard, À VALIDER AVEC LE CLIENT), hébergement.
@@ -538,13 +540,13 @@ Chaque tâche suit la checklist du §6, les **règles impératives de l'interfac
 - **W14 SMS** : **Fait, avec envoi simulé** (opérateur, langue et contenu restent À VALIDER AVEC LE CLIENT). `App\Services\Sms\SmsNotifier` enregistre chaque message (`sms_messages`, `SmsMessage`) puis l'envoie par la file d'attente (`SendSmsJob`, 3 essais) via un pilote (`SmsDriver`, choisi par `SMS_DRIVER`, `SmsManager`). Seul le pilote `log` existe : il écrit dans le journal Laravel et n'envoie rien ; un vrai opérateur s'ajoute en implémentant `SmsDriver`. Trois événements : **moto retrouvée** (au propriétaire, `MotoRetrouveeController::store`), **paiement confirmé** (au contact de la demande, `DemandeVgtController::confirmPaiement`), **demande reçue** (population, `PublicDemandeVgtController::store`). Gabarits français dans `config/sms.php`. Un échec d'envoi ne casse jamais l'action métier ; un numéro invalide ou `SMS_ENABLED=false` n'enregistre rien. Le numéro et le texte ne sont jamais copiés dans l'audit (`SmsMessage::activityExcept()`). Écran **Notifications SMS** (`sms.view`, admin national et superadmin) : journal en lecture seule avec filtre par statut. **Fait** (`tests/Feature/Sms/SmsTest.php`).
 - **M1 Contrôle d'une moto** : écran mobile de saisie du matricule et résultat (volée ou non, vignette à jour), à partir de l'endpoint de contrôle livré avec W11. **Fait**, contre l'API réelle (`GET /controles`, vérifié en direct avec une vraie moto et un matricule inconnu) ; détail au §9.
 - **M2 Informations (police)** : consultation des informations de W6 dans l'application. **Fait**, contre le contrat réel du §8 (`GET /informations`, `image_urls`/`document_urls`, endpoint public) : W6 est fusionnée, plus de mode maquette pour cet écran en production.
-- **M4 Demande de VGT (population)** : demande de renouvellement après un premier enregistrement, choix de la mairie, paiement, suivi, **sans connexion** (D32).
-- **M5 Motos retrouvées et informations (population)** : consultation, **sans connexion** (D32).
+- **M4 Demande de VGT (population)** : demande de renouvellement après un premier enregistrement, choix de la mairie, suivi, **sans connexion** (D32), identification par matricule + téléphone enregistré (validée par le client). **Fait** (`DemandeVgtForm` : deux onglets Nouvelle demande / Suivi, partagent les mêmes champs d'identité ; mairie choisie dans un menu, année de la vignette avec le même défaut et le même avertissement — « année déjà passée = majoration » — que l'écran Web ; chaque demande affichée avec sa pastille de statut, son montant et ses dates), contre l'API réelle (`POST /demandes-vgt`, `POST /demandes-vgt/suivi`, vérifié en direct avec une identité connue et une inconnue). Le paiement n'est pas dans l'application : confirmé par la mairie (W12).
+- **M5 Motos retrouvées et informations (population)** : consultation, **sans connexion** (D32). **Fait** (`MotosRetrouveesList`, `GET /motos-retrouvees` : matricule, genre, couleur, lieu, date, commissariat, pagination) — les informations (même liste que M2) étaient déjà faites.
 
 ### Ordre de travail de chacun
 
 - **Amadou** : W1 → W2 → W5 → W6 → W7 → W8 → W9 → W11 → W12 → W10 → W13 (fait) → **W14 reste**. W5 (comptes de test) et W6 (informations) passent en premier ; W11 et W12 avant W10 parce que M1 et M4 en dépendent.
-- **Moustapha** : W3 → W4 → M2 → **M1 faits**, contre l'API réelle. Reste **M4 → M5** : les deux ont leur API (§8, « Contrat de la population »), mais M4 attend encore la validation du client sur l'identification sans compte.
+- **Moustapha** : W3 → W4 → M2 → M1 → M4 → M5 **tous faits**, contre l'API réelle. Ses 15 points sont terminés.
 
 Chemin critique : W7 → W8 → W9 → W11 (endpoint de contrôle) → M1, puis W12 → M4 et W10 → M5.
 
