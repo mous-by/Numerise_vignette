@@ -118,6 +118,8 @@
             </div>
         </div>
     </div>
+        </div>
+    </div>
 
     @foreach ($users as $user)
         @include('users._fiche', ['user' => $user])

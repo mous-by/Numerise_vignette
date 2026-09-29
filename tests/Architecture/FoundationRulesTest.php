@@ -72,7 +72,11 @@ class FoundationRulesTest extends TestCase
     {
         // Routes accessibles à tout utilisateur connecté, sans permission métier (ARCHITECTURE §12).
         $authenticatedOnly = ['home', 'logout', 'password.change', 'password.change.update', 'profile.show', 'profile.update', 'profile.password', 'modules.show', 'api.logout', 'api.password', 'api.me'];
-        $public = ['login', 'login.store', 'vignette.verify'];
+        // Réservées aux invités (un compte déjà connecté en est redirigé) : seulement la connexion.
+        $guestOnly = ['login', 'login.store'];
+        // Publiques sans restriction sur l'état de connexion (D32, une carte VGT se vérifie qu'on soit connecté ou
+        // non) : ni guest, ni auth.
+        $publicWeb = ['vignette.verify'];
         $publicApi = ['api.health', 'api.login', 'api.informations.index', 'api.motos-retrouvees.index', 'api.mairies.index', 'api.demandes-vgt.store', 'api.demandes-vgt.suivi'];
 
         foreach (Route::getRoutes() as $route) {
@@ -98,7 +102,11 @@ class FoundationRulesTest extends TestCase
                 continue;
             }
 
-            if (in_array($name, $public, true)) {
+            if (in_array($name, $publicWeb, true)) {
+                continue;
+            }
+
+            if (in_array($name, $guestOnly, true)) {
                 $this->assertContains('guest', $middleware, "{$route->uri()} doit être réservée aux invités.");
 
                 continue;
@@ -111,6 +119,27 @@ class FoundationRulesTest extends TestCase
             $hasPermission = collect($middleware)->contains(fn ($m) => is_string($m) && str_starts_with($m, 'permission:'));
             $this->assertTrue($hasPermission || in_array($name, $authenticatedOnly, true), "{$route->uri()} ({$name}) doit porter permission:module.action ou figurer dans la liste blanche.");
         }
+    }
+
+    /**
+     * Un <div> jamais refermé (trouvé sur l'écran Utilisateurs, W5 : les modales et le pied de page se
+     * retrouvaient emboîtés dans une colonne de la grille, page cassée après un clic) casse la mise en page
+     * sans provoquer d'erreur PHP — Blade ne vérifie pas le HTML généré. Compte grossier (une balise par ligne
+     * de code, pas dans le HTML rendu) : assez pour repérer un oubli, pas pour valider une structure fine.
+     */
+    public function test_every_view_has_balanced_div_tags(): void
+    {
+        $offenders = [];
+
+        foreach ($this->filesIn(resource_path('views'), ['php']) as $file) {
+            $code = file_get_contents($file);
+            $depth = preg_match_all('/<div\b/', $code) - preg_match_all('#</div>#', $code);
+            if ($depth !== 0) {
+                $offenders[] = "$file ($depth)";
+            }
+        }
+
+        $this->assertSame([], $offenders, 'Balises <div> déséquilibrées : '.implode(', ', $offenders));
     }
 
     public function test_no_role_middleware_is_used_in_routes(): void

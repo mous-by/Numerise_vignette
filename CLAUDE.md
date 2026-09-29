@@ -248,6 +248,7 @@ tests/                 Feature, Unit, Architecture
 | D30 | Un seul fichier `.md` dans le dépôt : ce guide |
 | D31 | **Répartition par plateforme** : Moustapha = **mobile** (M1, M2, M4, M5) et les écrans Web **Audit** et **Système** (W3, W4), Amadou = **Web** (W1, W2, W5 à W14, avec l'API de chaque module). Les deux travaillent en parallèle : le mobile avance sur le contrat d'API (§8) sans attendre le Web. Hébergement **reporté** jusqu'au moment opportun (aucune tâche pour l'instant). Charge : 15 points contre 39 (§10) |
 | D32 | **La population n'a pas d'authentification** (décision de Moustapha, conforme au cahier §7 « Sécurité » : seuls la police, les commissaires et les agents de mairie utilisent la connexion). Elle consulte les informations et les motos retrouvées, et demande une VGT **sans compte**, par des routes **publiques** de l'API (sans jeton, limitées par IP, lecture seule sauf la demande de VGT). Elle s'identifie pour la demande par le **matricule** de sa moto et le **téléphone enregistré** à son nom au commissariat — **validé par le client** (2026-09-30). Supprime la tâche M3 |
+| D33 | **Deux bugs trouvés et corrigés (2026-09-29, Moustapha)**, à la demande du développeur sur l'écran Utilisateurs (hors de sa tâche assignée, revu comme le reste) : (1) `resources/views/users/index.blade.php` laissait deux `<div>` (`.row`, `.col-lg-9`) jamais refermés — les modales et le pied de page se retrouvaient emboîtés dans la colonne, page cassée après un clic sur « Ajouter » ; nouveau test d'architecture (`test_every_view_has_balanced_div_tags`) pour que ça ne revienne pas, sur n'importe quelle vue. (2) `phpunit.xml` ne lançait **jamais** `tests/Architecture` depuis le tout premier commit du socle (`testsuites` ne listait que `Unit` et `Feature`) : `composer test` était vert sans que ces garde-fous soient réellement exécutés. En le corrigeant, `vignette.verify` (§8, W13) s'est révélée mal classée dans le test (« réservée aux invités » au lieu de « publique sans restriction ») — corrigé aussi. Composer test passe maintenant réellement par l'architecture : 471 tests |
 
 ### Points ouverts — client (À VALIDER AVEC LE CLIENT)
 
@@ -281,7 +282,7 @@ Checklist :
 5. Vues : `@extends('layouts.admin')`, mêmes composants que les écrans existants (bandeau `card-header-brand`, DataTables, modales).
 6. API : `app/Http/Controllers/Api/V1`, Resource, `routes/api/v1/<module>.php`, et mise à jour du contrat (§8).
 7. Audit explicite des actions métier (`ActivityLogger::log('vgt.validated', …)`).
-8. Tests obligatoires : permission, cloisonnement, audit ; les tests d'architecture doivent rester verts.
+8. Tests obligatoires : permission, cloisonnement, audit ; les tests d'architecture doivent rester verts (`tests/Architecture`, dans `composer test` depuis le 2026-09-29 — ils existaient mais `phpunit.xml` ne les lançait pas, corrigé en même temps qu'un bug trouvé sur l'écran Utilisateurs : voir D33).
 
 Conventions : permissions `module.action` ; verbes d'audit `module.verbe_au_passé` ; réponses API en JSON et en français. **Interdits** : contourner le scope sans le signaler, créer des permissions à la main dans la base, `update()` de masse sans audit, secrets dans le dépôt, ressources externes.
 
