@@ -136,7 +136,7 @@ export default function DemandeVgtForm() {
 
       <Card style={styles.card}>
         <Card.Content style={{ gap: 10 }}>
-          <Text style={styles.helperTitle}>Votre moto doit déjà être enregistrée au commissariat (cahier §5).</Text>
+          <Text style={styles.helperTitle}>Votre moto doit déjà être enregistrée au commissariat.</Text>
           <TextInput
             mode="outlined"
             label="Matricule de la moto"

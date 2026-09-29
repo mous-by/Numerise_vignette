@@ -7,7 +7,6 @@ use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Une image ou un PDF rattaché à une information (W6). Module d'audit propre (`information_files`, la table par
@@ -29,9 +28,14 @@ class InformationFile extends Model
         return $this->belongsTo(Information::class);
     }
 
+    /**
+     * `asset()`, pas `Storage::disk('public')->url()` : ce dernier fige `APP_URL` (`config/filesystems.php`), donc
+     * l'adresse du poste de développement — injoignable depuis le téléphone qui appelle l'API par son IP réseau
+     * (§9). `asset()` se cale sur l'hôte de la requête en cours, comme `Mairie::logoUrl()`/`monumentUrl()` (W13).
+     */
     public function url(): string
     {
-        return Storage::disk('public')->url($this->path);
+        return asset('storage/'.$this->path);
     }
 
     public function activityNoun(): string
